@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MainLayout } from '@/components/templates';
 import { ChatPanel } from '@/components/organisms/chat-panel';
 import { MapView } from '@/components/organisms/map-view';
@@ -19,19 +19,15 @@ function generateSessionId(): string {
 }
 
 export default function Home() {
-  // Session ID (persisted in localStorage)
-  const [sessionId, setSessionId] = useState<string>('');
-  
-  useEffect(() => {
+  // Session ID (persisted in localStorage) - use lazy initialization
+  const [sessionId] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
     const stored = localStorage.getItem('map-assistant-session-id');
-    if (stored) {
-      setSessionId(stored);
-    } else {
-      const newId = generateSessionId();
-      localStorage.setItem('map-assistant-session-id', newId);
-      setSessionId(newId);
-    }
-  }, []);
+    if (stored) return stored;
+    const newId = generateSessionId();
+    localStorage.setItem('map-assistant-session-id', newId);
+    return newId;
+  });
 
   // Hooks
   const {

@@ -37,7 +37,6 @@ export function MapView({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [showInfoCard, setShowInfoCard] = useState(false);
   const [infoCardPlace, setInfoCardPlace] = useState<ExtractedPlace | Place | null>(null);
 
@@ -85,18 +84,21 @@ export function MapView({
     initMap();
   }, []);
 
+  // Store markers in ref to avoid re-render issues
+  const markersRef = useRef<MapMarker[]>([]);
+
   // Update markers when places change
   useEffect(() => {
     if (!map) return;
 
     // Clear existing markers
-    markers.forEach(({ marker, infoWindow }) => {
+    markersRef.current.forEach(({ marker, infoWindow }) => {
       marker.setMap(null);
       infoWindow.close();
     });
+    markersRef.current = [];
 
     if (places.length === 0) {
-      setMarkers([]);
       return;
     }
 
@@ -147,7 +149,7 @@ export function MapView({
       map.fitBounds(bounds, { padding: 50 });
     }
 
-    setMarkers(newMarkers);
+    markersRef.current = newMarkers;
 
     return () => {
       newMarkers.forEach(({ marker, infoWindow }) => {
@@ -155,7 +157,7 @@ export function MapView({
         infoWindow.close();
       });
     };
-  }, [map, places]);
+  }, [map, places, onPlaceSelect]);
 
   // Handle selected place
   useEffect(() => {
@@ -168,14 +170,14 @@ export function MapView({
     map.setZoom(15);
 
     // Open the info window for selected place
-    const markerData = markers.find(
+    const markerData = markersRef.current.find(
       (m) => m.place.name === selectedPlace.name
     );
     if (markerData) {
-      markers.forEach(({ infoWindow }) => infoWindow.close());
+      markersRef.current.forEach(({ infoWindow }) => infoWindow.close());
       markerData.infoWindow.open(map, markerData.marker);
     }
-  }, [map, selectedPlace, markers]);
+  }, [map, selectedPlace]);
 
   if (isLoading) {
     return (
