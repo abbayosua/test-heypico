@@ -1,0 +1,87 @@
+// Prisma Schema for AI Map Assistant
+// Supports: SQLite (local development) and PostgreSQL (Neon for production)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // For Neon connection pooling
+}
+
+// ============ CONVERSATION & MESSAGES ============
+
+model Conversation {
+  id        String    @id @default(cuid())
+  sessionId String    @index
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+  settings  SessionSettings?
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // "user" | "assistant"
+  content        String       @db.Text
+  placesData     String?      @db.Text // JSON: extracted places
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ============ USER SETTINGS ============
+
+model SessionSettings {
+  id             String       @id @default(cuid())
+  sessionId      String       @unique
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  llmProvider    String       @default("ollama") // "ollama" | "gemini"
+  ollamaModel    String?
+  geminiModel    String?
+  geminiApiKey   String?      @db.Text // User's Gemini API key (optional)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("session_settings")
+}
+
+// ============ CACHING ============
+
+model SearchCache {
+  id        String   @id @default(cuid())
+  queryHash String   @unique
+  query     String   @db.Text
+  response  String   @db.Text
+  places    String   @db.Text // JSON: Google Places results
+  provider  String
+  createdAt DateTime @default(now())
+  expiresAt DateTime // TTL for cache invalidation
+
+  @@index([expiresAt])
+  @@map("search_cache")
+}
+
+// ============ USAGE LOGGING ============
+
+model ApiUsageLog {
+  id        String   @id @default(cuid())
+  apiType   String   // "places" | "geocode" | "directions" | "llm"
+  provider  String?  // "ollama" | "gemini" | "google"
+  sessionId String?
+  costUnits Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([apiType, createdAt])
+  @@map("api_usage_logs")
+}
