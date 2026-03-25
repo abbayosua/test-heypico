@@ -228,28 +228,16 @@ src/
 
 ## 📱 Screenshots
 
-### Chat Interface
-Ask natural language questions about places:
+### Desktop View
+![Desktop Screenshot](./public/screenshot.png)
 
-```
-User: "Where can I find good sushi restaurants in Tokyo?"
+### Mobile View
+![Mobile Screenshot](./public/screenshot-mobile.png)
 
-AI: Here are some highly-rated sushi restaurants in Tokyo:
-
-1. Sushi Dai - Famous for its tuna, located in Tsukiji Outer Market
-2. Sushi Saito - Three Michelin stars, exquisite omakase experience
-3. Sukiyabashi Jiro - Legendary sushi restaurant in Ginza
-```
-
-### Interactive Map
-- Markers appear for each mentioned place
-- Click markers for details
-- Get directions or open in Google Maps
-
-### Settings Panel
-- Switch between Ollama and Gemini
-- Select from available models
-- Configure API keys
+### Features Demonstrated
+- **Chat Interface** - Ask natural language questions about places
+- **Interactive Map** - Markers appear for each mentioned place with clickable details
+- **Settings Panel** - Switch between Ollama and Gemini, select models, configure API keys
 
 ---
 
