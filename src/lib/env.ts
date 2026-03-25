@@ -7,7 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('file:./dev.db'),
   
   // LLM Provider
-  LLM_PROVIDER: z.enum(['ollama', 'gemini']).default('ollama'),
+  LLM_PROVIDER: z.enum(['ollama', 'gemini']).default('gemini'),
   
   // Ollama
   OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
@@ -15,7 +15,7 @@ const envSchema = z.object({
   
   // Gemini
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_DEFAULT_MODEL: z.string().default('gemini-2.0-flash-exp'),
+  GEMINI_DEFAULT_MODEL: z.string().default('gemini-2.5-flash-lite'),
   
   // Google Maps
   GOOGLE_MAPS_API_KEY: z.string().optional(),

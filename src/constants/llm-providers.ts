@@ -18,10 +18,10 @@ export const DEFAULT_OLLAMA_MODELS: LLMModel[] = [
 ];
 
 export const DEFAULT_GEMINI_MODELS: LLMModel[] = [
-  { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)', provider: 'gemini' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Cheapest)', provider: 'gemini' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini' },
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini' },
-  { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash-8B', provider: 'gemini' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },
 ];
 
 export const SYSTEM_PROMPT = `You are an AI Location Assistant specialized in helping users find places to visit, eat, explore, and discover.
