@@ -233,7 +233,7 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
                   value={geminiApiKey}
                   onChange={setGeminiApiKey}
                   hasExistingKey={status.gemini.hasApiKey}
-                  provider="Gemini"
+                  provider="gemini"
                 />
               </>
             )}
@@ -250,7 +250,7 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
                   value={llm7ApiKey}
                   onChange={setLlm7ApiKey}
                   hasExistingKey={status.llm7.hasApiKey}
-                  provider="LLM7"
+                  provider="llm7"
                 />
               </>
             )}

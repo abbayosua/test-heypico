@@ -1,9 +1,9 @@
-// API Key Input Molecule - For Gemini API key
+// API Key Input Molecule - For LLM provider API keys
 
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Check, X } from '@/components/atoms/icon';
+import { Eye, EyeOff, Check } from '@/components/atoms/icon';
 import { Input } from '@/components/atoms/input';
 import { Label } from '@/components/atoms/label';
 import { Button } from '@/components/atoms/button';
@@ -16,7 +16,21 @@ interface ApiKeyInputProps {
   hasExistingKey?: boolean;
   disabled?: boolean;
   className?: string;
+  provider?: 'gemini' | 'llm7';
 }
+
+const PROVIDER_CONFIG = {
+  gemini: {
+    name: 'Gemini',
+    getUrl: 'https://makersuite.google.com/app/apikey',
+    getUrlText: 'Google AI Studio',
+  },
+  llm7: {
+    name: 'LLM7',
+    getUrl: 'https://token.llm7.io/',
+    getUrlText: 'token.llm7.io',
+  },
+};
 
 export function ApiKeyInput({
   value,
@@ -25,9 +39,12 @@ export function ApiKeyInput({
   hasExistingKey = false,
   disabled = false,
   className,
+  provider = 'gemini',
 }: ApiKeyInputProps) {
   const [showKey, setShowKey] = useState(false);
   const [isEditing, setIsEditing] = useState(!hasExistingKey);
+
+  const config = PROVIDER_CONFIG[provider];
 
   const handleSave = () => {
     if (value.trim()) {
@@ -44,7 +61,7 @@ export function ApiKeyInput({
   if (!isEditing && hasExistingKey) {
     return (
       <div className={cn('space-y-2', className)}>
-        <Label>Gemini API Key</Label>
+        <Label>{config.name} API Key</Label>
         <div className="flex items-center gap-2">
           <div className="flex-1 px-3 py-2 bg-muted rounded-md text-sm">
             ••••••••••••••••
@@ -68,7 +85,7 @@ export function ApiKeyInput({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <Label htmlFor="api-key">Gemini API Key</Label>
+      <Label htmlFor="api-key">{config.name} API Key</Label>
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Input
@@ -76,7 +93,7 @@ export function ApiKeyInput({
             type={showKey ? 'text' : 'password'}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Enter your Gemini API key"
+            placeholder={`Enter your ${config.name} API key`}
             disabled={disabled}
             className="pr-10"
           />
@@ -106,12 +123,12 @@ export function ApiKeyInput({
       <p className="text-xs text-muted-foreground">
         Get your API key from{' '}
         <a
-          href="https://makersuite.google.com/app/apikey"
+          href={config.getUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-foreground"
         >
-          Google AI Studio
+          {config.getUrlText}
         </a>
       </p>
     </div>
