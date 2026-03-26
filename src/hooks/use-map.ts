@@ -3,11 +3,28 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { Place, ExtractedPlace, DirectionsRoute, GeocodeResult } from '@/types';
+import type { Place, ExtractedPlace, DirectionsRoute, GeocodeResult, PlaceGroup } from '@/types';
+
+// Colors for place groups (cycling through)
+const GROUP_COLORS = [
+  '#3B82F6', // Blue
+  '#EF4444', // Red
+  '#10B981', // Green
+  '#F59E0B', // Amber
+  '#8B5CF6', // Purple
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#F97316', // Orange
+];
 
 interface UseMapReturn {
-  places: (Place | ExtractedPlace)[];
+  places: (Place | ExtractedPlace)[]; // All places from all groups (for backward compat)
+  placeGroups: PlaceGroup[];
+  activeGroupId: string | null;
   setPlaces: (places: (Place | ExtractedPlace)[]) => void;
+  addPlaceGroup: (query: string, places: (Place | ExtractedPlace)[]) => string;
+  setActiveGroup: (groupId: string | null) => void;
+  clearPlaceGroups: () => void;
   selectedPlace: Place | ExtractedPlace | null;
   setSelectedPlace: (place: Place | ExtractedPlace | null) => void;
   directions: DirectionsRoute[] | null;
@@ -25,6 +42,8 @@ interface UseMapReturn {
 
 export function useMap(): UseMapReturn {
   const [places, setPlaces] = useState<(Place | ExtractedPlace)[]>([]);
+  const [placeGroups, setPlaceGroups] = useState<PlaceGroup[]>([]);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | ExtractedPlace | null>(null);
   const [directions, setDirections] = useState<DirectionsRoute[] | null>(null);
   const [directionsLoading, setDirectionsLoading] = useState(false);
@@ -32,6 +51,40 @@ export function useMap(): UseMapReturn {
   const [directionsDestination, setDirectionsDestination] = useState<string | null>(null);
   const [googleMapsUrl, setGoogleMapsUrl] = useState<string | null>(null);
   const [directionsPolyline, setDirectionsPolyline] = useState<string | null>(null);
+
+  // Add a new place group
+  const addPlaceGroup = useCallback((query: string, newPlaces: (Place | ExtractedPlace)[]): string => {
+    const groupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const colorIndex = placeGroups.length % GROUP_COLORS.length;
+    
+    const newGroup: PlaceGroup = {
+      id: groupId,
+      query,
+      places: newPlaces,
+      color: GROUP_COLORS[colorIndex],
+      createdAt: new Date(),
+    };
+
+    setPlaceGroups(prev => [...prev, newGroup]);
+    setActiveGroupId(groupId); // New group becomes active
+    
+    // Update flat places for backward compatibility
+    setPlaces(prev => [...prev, ...newPlaces]);
+    
+    return groupId;
+  }, [placeGroups.length]);
+
+  // Set active group (for highlighting)
+  const setActiveGroup = useCallback((groupId: string | null) => {
+    setActiveGroupId(groupId);
+  }, []);
+
+  // Clear all place groups
+  const clearPlaceGroups = useCallback(() => {
+    setPlaceGroups([]);
+    setActiveGroupId(null);
+    setPlaces([]);
+  }, []);
 
   const getDirections = useCallback(async (
     origin: string | { lat: number; lng: number },
@@ -131,7 +184,12 @@ export function useMap(): UseMapReturn {
 
   return {
     places,
+    placeGroups,
+    activeGroupId,
     setPlaces,
+    addPlaceGroup,
+    setActiveGroup,
+    clearPlaceGroups,
     selectedPlace,
     setSelectedPlace,
     directions,

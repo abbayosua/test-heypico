@@ -65,12 +65,16 @@ export default function Home() {
     isLoading,
     provider,
     model,
+    lastPlaceGroup,
     sendMessage,
   } = useChat({ sessionId, userLocation });
 
   const {
     places: mapPlaces,
-    setPlaces: setMapPlaces,
+    placeGroups,
+    activeGroupId,
+    addPlaceGroup,
+    setActiveGroup,
     selectedPlace,
     setSelectedPlace,
     directions,
@@ -96,15 +100,12 @@ export default function Home() {
     }
   }, [locationStatus, hasPromptedLocation]);
 
-  // Combine places from chat and map
-  const allPlaces = [...mapPlaces, ...chatPlaces.filter((p): p is ExtractedPlace & { location?: { lat: number; lng: number } } => 'location' in p)];
-
-  // Update map places when chat places change
+  // Add places to map when chat returns new places
   useEffect(() => {
-    if (chatPlaces.length > 0) {
-      setMapPlaces(chatPlaces as (Place | ExtractedPlace)[]);
+    if (lastPlaceGroup && chatPlaces.length > 0) {
+      addPlaceGroup(lastPlaceGroup.query, chatPlaces);
     }
-  }, [chatPlaces, setMapPlaces]);
+  }, [lastPlaceGroup, chatPlaces, addPlaceGroup]);
 
   // Selected place for details dialog
   const [detailsPlace, setDetailsPlace] = useState<Place | null>(null);
@@ -113,16 +114,21 @@ export default function Home() {
   // Directions panel state
   const [showDirections, setShowDirections] = useState(false);
 
-  // Handle place click
-  const handlePlaceClick = useCallback((place: ExtractedPlace | Place) => {
+  // Handle place click - with optional group activation
+  const handlePlaceClick = useCallback((place: ExtractedPlace | Place, groupId?: string) => {
     setSelectedPlace(place);
+    
+    // If groupId provided, activate that group
+    if (groupId) {
+      setActiveGroup(groupId);
+    }
     
     // If it's a full Place object, show details dialog
     if ('placeId' in place && place.placeId) {
       setDetailsPlace(place as Place);
       setShowDetails(true);
     }
-  }, [setSelectedPlace]);
+  }, [setSelectedPlace, setActiveGroup]);
 
   // Handle directions click
   const handleDirectionsClick = useCallback(async (place: ExtractedPlace | Place) => {
@@ -151,6 +157,11 @@ export default function Home() {
     return await requestPermission();
   }, [requestPermission]);
 
+  // Handle send message wrapper
+  const handleSendMessage = useCallback(async (message: string) => {
+    await sendMessage(message);
+  }, [sendMessage]);
+
   // Show loading state until session is ready (prevents hydration mismatch)
   if (!isReady) {
     return (
@@ -176,7 +187,7 @@ export default function Home() {
         <ChatPanel
           messages={messages}
           isLoading={isLoading}
-          onSendMessage={sendMessage}
+          onSendMessage={handleSendMessage}
           onPlaceClick={handlePlaceClick}
         />
       </div>
@@ -186,7 +197,9 @@ export default function Home() {
         {/* Map View */}
         <div className="flex-1 relative h-full min-h-0">
           <MapView
-            places={allPlaces}
+            places={mapPlaces}
+            placeGroups={placeGroups}
+            activeGroupId={activeGroupId}
             selectedPlace={selectedPlace}
             onPlaceSelect={handlePlaceClick}
             userLocation={userLocation}

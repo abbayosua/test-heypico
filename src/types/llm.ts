@@ -1,5 +1,7 @@
 // LLM Provider Types
 
+import type { ExtractedPlace } from './place';
+
 // Simple chat message format for LLM providers
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -21,17 +23,6 @@ export interface LLMResponse {
   places?: ExtractedPlace[];
 }
 
-export interface ExtractedPlace {
-  name: string;
-  address?: string;
-  type?: string;
-  description?: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
-}
-
 export interface ProviderStatus {
   ollama: {
     available: boolean;
@@ -48,3 +39,6 @@ export interface ProviderStatus {
     models: LLMModel[];
   };
 }
+
+// Re-export ExtractedPlace for backward compatibility
+export type { ExtractedPlace } from './place';

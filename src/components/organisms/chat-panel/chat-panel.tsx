@@ -14,7 +14,7 @@ interface ChatPanelProps {
   messages: Message[];
   isLoading: boolean;
   onSendMessage: (message: string) => void;
-  onPlaceClick?: (place: ExtractedPlace) => void;
+  onPlaceClick?: (place: ExtractedPlace, groupId?: string) => void;
   className?: string;
 }
 
@@ -55,7 +55,7 @@ export function ChatPanel({
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center mt-4">
                   <ExamplePrompt
-                    text="Find sushi restaurants in Tokyo"
+                    text="Best restaurants near me"
                     onClick={onSendMessage}
                   />
                   <ExamplePrompt
@@ -63,7 +63,7 @@ export function ChatPanel({
                     onClick={onSendMessage}
                   />
                   <ExamplePrompt
-                    text="Tourist attractions in Paris"
+                    text="Tourist attractions near me"
                     onClick={onSendMessage}
                   />
                 </div>
@@ -77,6 +77,7 @@ export function ChatPanel({
                   role={message.role}
                   content={message.content}
                   places={message.placesData || undefined}
+                  placeGroupId={message.placeGroupId}
                   onPlaceClick={onPlaceClick}
                 />
               ))}

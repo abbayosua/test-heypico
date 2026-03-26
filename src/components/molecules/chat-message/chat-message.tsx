@@ -13,13 +13,15 @@ interface ChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
   places?: ExtractedPlace[];
-  onPlaceClick?: (place: ExtractedPlace) => void;
+  placeGroupId?: string;
+  onPlaceClick?: (place: ExtractedPlace, groupId?: string) => void;
 }
 
 export function ChatMessage({
   role,
   content,
   places,
+  placeGroupId,
   onPlaceClick,
 }: ChatMessageProps) {
   const isUser = role === 'user';
@@ -80,7 +82,7 @@ export function ChatMessage({
             {places.map((place, index) => (
               <button
                 key={index}
-                onClick={() => onPlaceClick?.(place)}
+                onClick={() => onPlaceClick?.(place, placeGroupId)}
                 className="flex items-center gap-2 px-3 py-2 bg-background border rounded-lg text-xs hover:bg-accent transition-colors text-left"
               >
                 <span className="font-medium">{place.name}</span>

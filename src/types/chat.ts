@@ -1,6 +1,6 @@
 // Chat Types
 
-import type { ExtractedPlace } from './llm';
+import type { ExtractedPlace } from './place';
 
 export interface Conversation {
   id: string;
@@ -17,11 +17,12 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   placesData: ExtractedPlace[] | null;
+  placeGroupId?: string; // Reference to the place group
   createdAt: Date;
 }
 
-// Simple chat message format for LLM providers
-export interface ChatMessage {
+// Simple chat message format for LLM providers (renamed to avoid conflict)
+export interface ChatMessageForLLM {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
@@ -42,6 +43,8 @@ export interface SendMessageRequest {
 export interface SendMessageResponse {
   response: string;
   places: ExtractedPlace[];
+  placeGroupId: string; // ID of the place group for this search
+  query: string; // The original search query
   provider: string;
   model: string;
   conversationId: string;

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin } from '@/components/atoms/icon';
 import { Skeleton } from '@/components/atoms/skeleton';
-import type { ExtractedPlace, Place } from '@/types';
+import type { ExtractedPlace, Place, PlaceGroup } from '@/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '@/constants';
 
 interface UserLocation {
@@ -16,6 +16,8 @@ interface UserLocation {
 
 interface MapViewProps {
   places?: (ExtractedPlace | Place)[];
+  placeGroups?: PlaceGroup[];
+  activeGroupId?: string | null;
   selectedPlace?: ExtractedPlace | Place | null;
   onPlaceSelect?: (place: ExtractedPlace | Place) => void;
   userLocation?: UserLocation | null;
@@ -27,6 +29,7 @@ interface MapMarker {
   place: ExtractedPlace | Place;
   marker: google.maps.Marker;
   infoWindow: google.maps.InfoWindow;
+  groupId: string;
 }
 
 // Global callback name for Google Maps
@@ -38,6 +41,8 @@ let resolveCallback: (() => void) | null = null;
 
 export function MapView({
   places = [],
+  placeGroups = [],
+  activeGroupId = null,
   selectedPlace,
   onPlaceSelect,
   userLocation,
@@ -267,7 +272,7 @@ export function MapView({
     };
   }, [map, userLocation]);
 
-  // Update markers when places change
+  // Update markers when places or groups change
   useEffect(() => {
     if (!map) return;
 
@@ -278,44 +283,65 @@ export function MapView({
     });
     markersRef.current = [];
 
-    if (places.length === 0) return;
+    // If we have place groups, use those; otherwise fall back to flat places
+    const groupsToRender = placeGroups.length > 0 ? placeGroups : 
+      (places.length > 0 ? [{ id: 'default', query: '', places, color: '#3B82F6', createdAt: new Date() }] : []);
+
+    if (groupsToRender.length === 0 || groupsToRender.every(g => g.places.length === 0)) return;
 
     const newMarkers: MapMarker[] = [];
     const bounds = new google.maps.LatLngBounds();
 
-    places.forEach((place) => {
-      const location = 'location' in place ? place.location : null;
-      if (!location) return;
+    groupsToRender.forEach((group) => {
+      const isActive = activeGroupId ? group.id === activeGroupId : group.id === groupsToRender[groupsToRender.length - 1].id;
+      const opacity = isActive ? 1.0 : 0.35;
 
-      const position = { lat: location.lat, lng: location.lng };
+      group.places.forEach((place) => {
+        const location = 'location' in place ? place.location : null;
+        if (!location) return;
 
-      const marker = new google.maps.Marker({
-        position,
-        map,
-        title: place.name,
-        animation: google.maps.Animation.DROP,
+        const position = { lat: location.lat, lng: location.lng };
+
+        // Create marker with custom icon based on group color
+        const marker = new google.maps.Marker({
+          position,
+          map,
+          title: place.name,
+          animation: google.maps.Animation.DROP,
+          opacity,
+          // Custom icon with group color
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: group.color,
+            fillOpacity: opacity,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          },
+        });
+
+        const infoContent = `
+          <div style="padding: 8px; max-width: 200px;">
+            <h3 style="font-weight: bold; margin-bottom: 4px;">${place.name}</h3>
+            ${place.address ? `<p style="font-size: 12px; color: #666;">${place.address}</p>` : ''}
+            ${'rating' in place && place.rating ? `<p style="font-size: 12px;">⭐ ${place.rating}</p>` : ''}
+            ${group.query ? `<p style="font-size: 11px; color: #999; margin-top: 4px;">Search: ${group.query}</p>` : ''}
+          </div>
+        `;
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: infoContent,
+        });
+
+        marker.addListener('click', () => {
+          newMarkers.forEach(({ infoWindow: iw }) => iw.close());
+          infoWindow.open(map, marker);
+          onPlaceSelect?.(place);
+        });
+
+        bounds.extend(position);
+        newMarkers.push({ place, marker, infoWindow, groupId: group.id });
       });
-
-      const infoContent = `
-        <div style="padding: 8px; max-width: 200px;">
-          <h3 style="font-weight: bold; margin-bottom: 4px;">${place.name}</h3>
-          ${place.address ? `<p style="font-size: 12px; color: #666;">${place.address}</p>` : ''}
-          ${'rating' in place && place.rating ? `<p style="font-size: 12px;">⭐ ${place.rating}</p>` : ''}
-        </div>
-      `;
-
-      const infoWindow = new google.maps.InfoWindow({
-        content: infoContent,
-      });
-
-      marker.addListener('click', () => {
-        newMarkers.forEach(({ infoWindow: iw }) => iw.close());
-        infoWindow.open(map, marker);
-        onPlaceSelect?.(place);
-      });
-
-      bounds.extend(position);
-      newMarkers.push({ place, marker, infoWindow });
     });
 
     if (newMarkers.length > 0) {
@@ -330,7 +356,7 @@ export function MapView({
         infoWindow.close();
       });
     };
-  }, [map, places, onPlaceSelect]);
+  }, [map, places, placeGroups, activeGroupId, onPlaceSelect]);
 
   // Handle selected place
   useEffect(() => {
