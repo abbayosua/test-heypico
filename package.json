@@ -6,14 +6,11 @@
     "dev": "NODE_OPTIONS='--max-old-space-size=512' next dev -p 3000 2>&1 | tee dev.log",
     "build": "prisma generate && next build",
     "vercel-build": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma generate && prisma db push --accept-data-loss && next build",
+    "postinstall": "node -e \"if(process.env.VERCEL || process.env.DATABASE_URL?.includes('postgres')){require('fs').copyFileSync('prisma/schema.postgres.prisma','prisma/schema.prisma')}\" && prisma generate",
     "start": "next start",
     "lint": "eslint .",
     "db:push": "prisma db push",
-    "db:push:prod": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma db push",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate"
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
