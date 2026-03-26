@@ -1,9 +1,26 @@
-// Gemini Provider Implementation
+// Gemini Provider Implementation with Proxy Support
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
 import type { ILLMProvider } from './types';
 import type { ChatMessage, LLMModel } from '@/types';
 import { DEFAULT_GEMINI_MODELS } from '@/constants';
+
+// Initialize proxy if configured
+let proxyConfigured = false;
+
+function initProxy(): void {
+  if (proxyConfigured) return;
+  
+  const proxyUrl = process.env.GEMINI_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+  
+  if (proxyUrl) {
+    console.log('[Gemini] Configuring proxy:', proxyUrl.split('@')[1] || 'proxy configured');
+    const proxyAgent = new ProxyAgent(proxyUrl);
+    setGlobalDispatcher(proxyAgent);
+    proxyConfigured = true;
+  }
+}
 
 export class GeminiProvider implements ILLMProvider {
   name = 'gemini' as const;
@@ -11,6 +28,9 @@ export class GeminiProvider implements ILLMProvider {
   private defaultModel: string;
 
   constructor(apiKey: string, defaultModel: string = 'gemini-2.5-flash-lite') {
+    // Initialize proxy before making any requests
+    initProxy();
+    
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.defaultModel = defaultModel;
   }

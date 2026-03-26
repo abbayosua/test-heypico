@@ -1,18 +1,12 @@
 // LLM Provider Types
 
-export type LLMProviderType = 'ollama' | 'gemini';
-
+// Simple chat message format for LLM providers
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
-export interface LLMProvider {
-  name: LLMProviderType;
-  chat(messages: ChatMessage[]): Promise<string>;
-  isAvailable(): Promise<boolean>;
-  getModels(): Promise<LLMModel[]>;
-}
+export type LLMProviderType = 'ollama' | 'gemini';
 
 export interface LLMModel {
   id: string;
@@ -32,6 +26,10 @@ export interface ExtractedPlace {
   address?: string;
   type?: string;
   description?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface ProviderStatus {
@@ -41,6 +39,7 @@ export interface ProviderStatus {
   };
   gemini: {
     available: boolean;
+    hasApiKey: boolean;
     models: LLMModel[];
   };
 }

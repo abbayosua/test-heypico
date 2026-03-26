@@ -20,6 +20,12 @@ export interface Message {
   createdAt: Date;
 }
 
+// Simple chat message format for LLM providers
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 export interface ChatState {
   conversations: Conversation[];
   currentConversation: Conversation | null;
