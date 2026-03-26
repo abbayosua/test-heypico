@@ -3,13 +3,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Navigation, ChevronDown, ChevronUp, Car, Walk, Bike, Train, ExternalLink } from '@/components/atoms/icon';
+import { Navigation, ChevronDown, ChevronUp, ExternalLink, X } from '@/components/atoms/icon';
 import { Button } from '@/components/atoms/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/atoms/card';
 import { Badge } from '@/components/atoms/badge';
 import { Separator } from '@/components/atoms/separator';
 import { Spinner } from '@/components/atoms/spinner';
-import type { DirectionsRoute, ExtractedPlace, Place } from '@/types';
+import type { DirectionsRoute } from '@/types';
 
 interface DirectionsPanelProps {
   origin?: string;
@@ -17,17 +17,8 @@ interface DirectionsPanelProps {
   routes?: DirectionsRoute[];
   googleMapsUrl?: string;
   isLoading?: boolean;
-  onTravelModeChange?: (mode: 'driving' | 'walking' | 'bicycling' | 'transit') => void;
-  travelMode?: 'driving' | 'walking' | 'bicycling' | 'transit';
   onClose?: () => void;
 }
-
-const travelModeIcons = {
-  driving: Car,
-  walking: Walk,
-  bicycling: Bike,
-  transit: Train,
-};
 
 export function DirectionsPanel({
   origin,
@@ -35,21 +26,13 @@ export function DirectionsPanel({
   routes,
   googleMapsUrl,
   isLoading = false,
-  onTravelModeChange,
-  travelMode = 'driving',
   onClose,
 }: DirectionsPanelProps) {
   const [expandedRoute, setExpandedRoute] = useState(0);
-  const [selectedMode, setSelectedMode] = useState(travelMode);
-
-  const handleModeChange = (mode: 'driving' | 'walking' | 'bicycling' | 'transit') => {
-    setSelectedMode(mode);
-    onTravelModeChange?.(mode);
-  };
 
   if (isLoading) {
     return (
-      <Card className="w-full">
+      <Card className="w-full h-full flex items-center justify-center">
         <CardContent className="flex items-center justify-center p-8">
           <Spinner size="lg" />
         </CardContent>
@@ -62,16 +45,16 @@ export function DirectionsPanel({
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
+    <Card className="w-full h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Navigation className="h-5 w-5" />
             Directions
           </CardTitle>
           {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              Close
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -91,30 +74,12 @@ export function DirectionsPanel({
             <span className="truncate">{destination}</span>
           </div>
         </div>
-
-        {/* Travel Mode Selector */}
-        <div className="flex gap-1 mt-2">
-          {(['driving', 'walking', 'bicycling', 'transit'] as const).map((mode) => {
-            const Icon = travelModeIcons[mode];
-            return (
-              <Button
-                key={mode}
-                variant={selectedMode === mode ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleModeChange(mode)}
-                className="flex-1"
-              >
-                <Icon className="h-4 w-4" />
-              </Button>
-            );
-          })}
-        </div>
       </CardHeader>
 
-      <Separator />
+      <Separator className="shrink-0" />
 
-      <CardContent className="p-0">
-        {/* Routes */}
+      {/* Scrollable Routes Section */}
+      <CardContent className="flex-1 overflow-y-auto p-0 min-h-0">
         <div className="divide-y">
           {routes.map((route, index) => (
             <div key={index}>
@@ -160,21 +125,20 @@ export function DirectionsPanel({
             </div>
           ))}
         </div>
-
-        {/* Open in Google Maps */}
-        {googleMapsUrl && (
-          <div className="p-4 border-t">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => window.open(googleMapsUrl, '_blank')}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open in Google Maps
-            </Button>
-          </div>
-        )}
       </CardContent>
+
+      {/* Fixed Bottom - Open in Google Maps */}
+      {googleMapsUrl && (
+        <div className="shrink-0 p-4 border-t">
+          <Button
+            className="w-full"
+            onClick={() => window.open(googleMapsUrl, '_blank')}
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open in Google Maps
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

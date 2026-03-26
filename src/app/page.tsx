@@ -209,7 +209,7 @@ export default function Home() {
 
         {/* Directions Panel - Overlay on mobile, side panel on desktop */}
         {showDirections && directions && (
-          <div className="absolute md:relative top-0 right-0 w-full md:w-80 z-10 p-4 md:p-0">
+          <div className="absolute md:relative top-0 right-0 w-full md:w-80 h-full z-10 p-4 md:p-0 flex flex-col">
             <DirectionsPanel
               origin={directionsOrigin || undefined}
               destination={directionsDestination || undefined}
