@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import { Settings, X, Check, AlertCircle } from '@/components/atoms/icon';
 import { Button } from '@/components/atoms/button';
 import { Label } from '@/components/atoms/label';
-import { Input } from '@/components/atoms/input';
 import { Separator } from '@/components/atoms/separator';
 import { Spinner } from '@/components/atoms/spinner';
 import { ProviderSelect } from '@/components/molecules/provider-select';
@@ -22,6 +21,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import type { LLMProviderType, LLMModel } from '@/types';
+import { DEFAULT_GEMINI_MODELS, DEFAULT_LLM7_MODELS } from '@/constants';
 
 interface SettingsSheetProps {
   sessionId: string;
@@ -31,6 +31,7 @@ interface SettingsSheetProps {
 interface ProviderStatus {
   ollama: { available: boolean };
   gemini: { available: boolean; hasApiKey: boolean };
+  llm7: { available: boolean; hasApiKey: boolean };
 }
 
 export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProps) {
@@ -38,20 +39,24 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Settings state
-  const [provider, setProvider] = useState<LLMProviderType>('ollama');
+  // Settings state - default to LLM7
+  const [provider, setProvider] = useState<LLMProviderType>('llm7');
   const [ollamaModel, setOllamaModel] = useState<string | null>(null);
   const [geminiModel, setGeminiModel] = useState<string | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [llm7Model, setLlm7Model] = useState<string | null>(null);
+  const [llm7ApiKey, setLlm7ApiKey] = useState('');
 
   // Models
   const [ollamaModels, setOllamaModels] = useState<LLMModel[]>([]);
-  const [geminiModels, setGeminiModels] = useState<LLMModel[]>([]);
+  const [geminiModels] = useState<LLMModel[]>(DEFAULT_GEMINI_MODELS);
+  const [llm7Models] = useState<LLMModel[]>(DEFAULT_LLM7_MODELS);
 
   // Status
   const [status, setStatus] = useState<ProviderStatus>({
     ollama: { available: false },
     gemini: { available: false, hasApiKey: false },
+    llm7: { available: false, hasApiKey: false },
   });
 
   // Fetch settings and status on open
@@ -69,9 +74,10 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
       const res = await fetch(`/api/settings?sessionId=${sessionId}`);
       if (res.ok) {
         const data = await res.json();
-        setProvider(data.llmProvider || 'ollama');
+        setProvider(data.llmProvider || 'llm7');
         setOllamaModel(data.ollamaModel);
         setGeminiModel(data.geminiModel);
+        setLlm7Model(data.llm7Model);
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -91,6 +97,10 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
             available: data.llm?.gemini?.available || false,
             hasApiKey: data.llm?.gemini?.hasApiKey || false,
           },
+          llm7: {
+            available: data.llm?.llm7?.available || false,
+            hasApiKey: data.llm?.llm7?.hasApiKey || false,
+          },
         });
       }
     } catch (error) {
@@ -104,7 +114,6 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
       if (res.ok) {
         const data = await res.json();
         setOllamaModels(data.ollama?.models || []);
-        setGeminiModels(data.gemini?.models || []);
       }
     } catch (error) {
       console.error('Failed to fetch models:', error);
@@ -125,6 +134,10 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
       if (provider === 'gemini') {
         if (geminiModel) body.geminiModel = geminiModel;
         if (geminiApiKey) body.geminiApiKey = geminiApiKey;
+      }
+      if (provider === 'llm7') {
+        if (llm7Model) body.llm7Model = llm7Model;
+        if (llm7ApiKey) body.llm7ApiKey = llm7ApiKey;
       }
 
       const res = await fetch('/api/settings', {
@@ -168,16 +181,21 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
             {/* Provider Status */}
             <div className="space-y-2">
               <Label>Provider Status</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <StatusIndicator
-                  status={status.ollama.available ? 'connected' : 'disconnected'}
-                  label="Ollama"
-                  tooltip={status.ollama.available ? 'Ollama is running' : 'Ollama is not available'}
+                  status={status.llm7.hasApiKey ? 'connected' : 'disconnected'}
+                  label="LLM7"
+                  tooltip={status.llm7.hasApiKey ? 'API key configured' : 'API key required'}
                 />
                 <StatusIndicator
                   status={status.gemini.hasApiKey ? 'connected' : 'disconnected'}
                   label="Gemini"
                   tooltip={status.gemini.hasApiKey ? 'API key configured' : 'API key required'}
+                />
+                <StatusIndicator
+                  status={status.ollama.available ? 'connected' : 'disconnected'}
+                  label="Ollama"
+                  tooltip={status.ollama.available ? 'Ollama is running' : 'Ollama is not available'}
                 />
               </div>
             </div>
@@ -190,6 +208,7 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
               onChange={setProvider}
               ollamaAvailable={status.ollama.available}
               geminiAvailable={status.gemini.hasApiKey}
+              llm7Available={status.llm7.hasApiKey}
             />
 
             {/* Model Selection */}
@@ -214,6 +233,24 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
                   value={geminiApiKey}
                   onChange={setGeminiApiKey}
                   hasExistingKey={status.gemini.hasApiKey}
+                  provider="Gemini"
+                />
+              </>
+            )}
+
+            {provider === 'llm7' && (
+              <>
+                <ModelSelect
+                  value={llm7Model}
+                  onChange={setLlm7Model}
+                  models={llm7Models}
+                  placeholder="Select LLM7 model"
+                />
+                <ApiKeyInput
+                  value={llm7ApiKey}
+                  onChange={setLlm7ApiKey}
+                  hasExistingKey={status.llm7.hasApiKey}
+                  provider="LLM7"
                 />
               </>
             )}
@@ -256,6 +293,26 @@ export function SettingsSheet({ sessionId, onSettingsChange }: SettingsSheetProp
                         className="underline"
                       >
                         Google AI Studio
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {provider === 'llm7' && !status.llm7.hasApiKey && (
+                <div className="flex items-start gap-2 p-3 bg-muted rounded-lg">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-yellow-500" />
+                  <div>
+                    <p className="font-medium">API Key Required</p>
+                    <p className="mt-1">
+                      Get your free LLM7 token from{' '}
+                      <a
+                        href="https://token.llm7.io/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        token.llm7.io
                       </a>
                     </p>
                   </div>

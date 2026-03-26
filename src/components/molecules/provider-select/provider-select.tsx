@@ -19,6 +19,7 @@ interface ProviderSelectProps {
   onChange: (value: LLMProviderType) => void;
   ollamaAvailable?: boolean;
   geminiAvailable?: boolean;
+  llm7Available?: boolean;
   disabled?: boolean;
 }
 
@@ -27,6 +28,7 @@ export function ProviderSelect({
   onChange,
   ollamaAvailable = false,
   geminiAvailable = false,
+  llm7Available = false,
   disabled = false,
 }: ProviderSelectProps) {
   return (
@@ -41,18 +43,17 @@ export function ProviderSelect({
           <SelectValue placeholder="Select provider" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="ollama">
+          <SelectItem value="llm7">
             <div className="flex items-center justify-between w-full gap-2">
-              <span>Ollama (Local)</span>
-              {ollamaAvailable ? (
+              <span>LLM7 (Free)</span>
+              {llm7Available ? (
                 <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
                   <Check className="h-3 w-3 mr-1" />
-                  Available
+                  Ready
                 </Badge>
               ) : (
-                <Badge variant="outline" className="ml-2 text-red-600 border-red-600">
-                  <X className="h-3 w-3 mr-1" />
-                  Offline
+                <Badge variant="outline" className="ml-2 text-yellow-600 border-yellow-600">
+                  API Key Needed
                 </Badge>
               )}
             </div>
@@ -68,6 +69,22 @@ export function ProviderSelect({
               ) : (
                 <Badge variant="outline" className="ml-2 text-yellow-600 border-yellow-600">
                   API Key Needed
+                </Badge>
+              )}
+            </div>
+          </SelectItem>
+          <SelectItem value="ollama">
+            <div className="flex items-center justify-between w-full gap-2">
+              <span>Ollama (Local)</span>
+              {ollamaAvailable ? (
+                <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
+                  <Check className="h-3 w-3 mr-1" />
+                  Available
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="ml-2 text-red-600 border-red-600">
+                  <X className="h-3 w-3 mr-1" />
+                  Offline
                 </Badge>
               )}
             </div>

@@ -6,7 +6,7 @@ import { getAvailableModels, getProviderStatus } from '@/lib/llm';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const provider = searchParams.get('provider') as 'ollama' | 'gemini' | null;
+    const provider = searchParams.get('provider') as 'ollama' | 'gemini' | 'llm7' | null;
 
     if (provider) {
       // Get models for specific provider
@@ -26,6 +26,11 @@ export async function GET(request: NextRequest) {
         models: status.gemini.models,
         available: status.gemini.available,
         hasApiKey: status.gemini.hasApiKey,
+      },
+      llm7: {
+        models: status.llm7.models,
+        available: status.llm7.available,
+        hasApiKey: status.llm7.hasApiKey,
       },
     });
   } catch (error) {
