@@ -3,10 +3,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, ExternalLink, X } from '@/components/atoms/icon';
-import { Button } from '@/components/atoms/button';
-import { Badge } from '@/components/atoms/badge';
-import { Card, CardContent } from '@/components/atoms/card';
+import { MapPin } from '@/components/atoms/icon';
 import { Skeleton } from '@/components/atoms/skeleton';
 import type { ExtractedPlace, Place } from '@/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '@/constants';
@@ -21,7 +18,6 @@ interface MapViewProps {
   places?: (ExtractedPlace | Place)[];
   selectedPlace?: ExtractedPlace | Place | null;
   onPlaceSelect?: (place: ExtractedPlace | Place) => void;
-  onDirectionsClick?: (place: ExtractedPlace | Place) => void;
   userLocation?: UserLocation | null;
   directionsPolyline?: string | null;
   className?: string;
@@ -44,7 +40,6 @@ export function MapView({
   places = [],
   selectedPlace,
   onPlaceSelect,
-  onDirectionsClick,
   userLocation,
   directionsPolyline,
   className,
@@ -53,8 +48,6 @@ export function MapView({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showInfoCard, setShowInfoCard] = useState(false);
-  const [infoCardPlace, setInfoCardPlace] = useState<ExtractedPlace | Place | null>(null);
   const [mapsReady, setMapsReady] = useState(false);
   const initAttemptedRef = useRef(false);
 
@@ -318,8 +311,6 @@ export function MapView({
       marker.addListener('click', () => {
         newMarkers.forEach(({ infoWindow: iw }) => iw.close());
         infoWindow.open(map, marker);
-        setInfoCardPlace(place);
-        setShowInfoCard(true);
         onPlaceSelect?.(place);
       });
 
@@ -384,60 +375,6 @@ export function MapView({
       {isLoading && (
         <div className="absolute inset-0 pointer-events-none">
           <Skeleton className="w-full h-full" />
-        </div>
-      )}
-
-      {/* Info Card Overlay */}
-      {showInfoCard && infoCardPlace && (
-        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-10">
-          <Card className="shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <h3 className="font-semibold">{infoCardPlace.name}</h3>
-                  {infoCardPlace.address && (
-                    <p className="text-sm text-muted-foreground">
-                      {infoCardPlace.address}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowInfoCard(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {'rating' in infoCardPlace && infoCardPlace.rating && (
-                <Badge variant="secondary" className="mt-2">
-                  ⭐ {infoCardPlace.rating.toFixed(1)}
-                </Badge>
-              )}
-
-              <div className="flex gap-2 mt-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onDirectionsClick?.(infoCardPlace)}
-                >
-                  <Navigation className="h-4 w-4 mr-1" />
-                  Directions
-                </Button>
-                {'googleMapsUrl' in infoCardPlace && infoCardPlace.googleMapsUrl && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(infoCardPlace.googleMapsUrl, '_blank')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Open
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
     </div>

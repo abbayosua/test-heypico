@@ -184,12 +184,11 @@ export default function Home() {
       {/* Map & Directions - Right Side */}
       <div className="flex-1 flex flex-col md:flex-row h-[50vh] md:h-[calc(100vh-112px)]">
         {/* Map View */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative h-full min-h-0">
           <MapView
             places={allPlaces}
             selectedPlace={selectedPlace}
             onPlaceSelect={handlePlaceClick}
-            onDirectionsClick={handleDirectionsClick}
             userLocation={userLocation}
             directionsPolyline={directionsPolyline}
           />

@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/atoms/card';
 import { Bot, User } from '@/components/atoms/icon';
 import { cn } from '@/lib/utils';
 import type { ExtractedPlace } from '@/types';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
   role: 'user' | 'assistant';
@@ -53,8 +54,23 @@ export function ChatMessage({
               : 'bg-muted'
           )}
         >
-          <CardContent className="p-3 text-sm whitespace-pre-wrap">
-            {content}
+          <CardContent className="p-3 text-sm prose prose-sm dark:prose-invert max-w-none">
+            {isUser ? (
+              <span className="whitespace-pre-wrap">{content}</span>
+            ) : (
+              <ReactMarkdown
+                components={{
+                  // Style markdown elements
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                  li: ({ children }) => <li className="mb-1">{children}</li>,
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            )}
           </CardContent>
         </Card>
 

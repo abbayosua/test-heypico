@@ -25,20 +25,26 @@ export function ChatPanel({
   onPlaceClick,
   className,
 }: ChatPanelProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isLoading]);
+    scrollToBottom();
+  }, [messages, isLoading, scrollToBottom]);
 
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
       {/* Messages Area */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
-        <div className="flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col" ref={scrollContainerRef}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
               <div className="max-w-md space-y-4">
@@ -77,6 +83,8 @@ export function ChatPanel({
               {isLoading && <TypingIndicator />}
             </>
           )}
+          {/* Scroll anchor */}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
