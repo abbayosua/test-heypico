@@ -5,9 +5,16 @@
 import { useState, useCallback } from 'react';
 import type { Message, ExtractedPlace, SendMessageResponse } from '@/types';
 
+interface UserLocation {
+  lat: number;
+  lng: number;
+  city?: string;
+}
+
 interface UseChatOptions {
   sessionId: string;
   conversationId?: string;
+  userLocation?: UserLocation | null;
 }
 
 interface UseChatReturn {
@@ -23,7 +30,7 @@ interface UseChatReturn {
   setMessages: (messages: Message[]) => void;
 }
 
-export function useChat({ sessionId, conversationId: initialConversationId }: UseChatOptions): UseChatReturn {
+export function useChat({ sessionId, conversationId: initialConversationId, userLocation }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<Message[]>([]);
   const [places, setPlaces] = useState<ExtractedPlace[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +64,7 @@ export function useChat({ sessionId, conversationId: initialConversationId }: Us
           message,
           sessionId,
           conversationId,
+          userLocation,
         }),
       });
 
@@ -101,7 +109,7 @@ export function useChat({ sessionId, conversationId: initialConversationId }: Us
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, conversationId, isLoading]);
+  }, [sessionId, conversationId, isLoading, userLocation]);
 
   const clearChat = useCallback(() => {
     setMessages([]);

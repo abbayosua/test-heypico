@@ -11,11 +11,18 @@ import { Skeleton } from '@/components/atoms/skeleton';
 import type { ExtractedPlace, Place } from '@/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '@/constants';
 
+interface UserLocation {
+  lat: number;
+  lng: number;
+  city?: string;
+}
+
 interface MapViewProps {
   places?: (ExtractedPlace | Place)[];
   selectedPlace?: ExtractedPlace | Place | null;
   onPlaceSelect?: (place: ExtractedPlace | Place) => void;
   onDirectionsClick?: (place: ExtractedPlace | Place) => void;
+  userLocation?: UserLocation | null;
   className?: string;
 }
 
@@ -37,6 +44,7 @@ export function MapView({
   selectedPlace,
   onPlaceSelect,
   onDirectionsClick,
+  userLocation,
   className,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -142,9 +150,14 @@ export function MapView({
     initAttemptedRef.current = true;
 
     try {
+      // Use user location as default center if available
+      const initialCenter = userLocation
+        ? { lat: userLocation.lat, lng: userLocation.lng }
+        : DEFAULT_MAP_CENTER;
+
       const googleMap = new google.maps.Map(mapRef.current, {
-        center: DEFAULT_MAP_CENTER,
-        zoom: DEFAULT_MAP_ZOOM,
+        center: initialCenter,
+        zoom: userLocation ? 13 : DEFAULT_MAP_ZOOM,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: true,
@@ -164,6 +177,54 @@ export function MapView({
 
   // Store markers in ref
   const markersRef = useRef<MapMarker[]>([]);
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+
+  // Add user location marker
+  useEffect(() => {
+    if (!map) return;
+
+    // Remove existing user marker
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setMap(null);
+      userMarkerRef.current = null;
+    }
+
+    if (!userLocation) return;
+
+    // Create user location marker with custom icon
+    const userMarker = new google.maps.Marker({
+      position: { lat: userLocation.lat, lng: userLocation.lng },
+      map,
+      title: userLocation.city || 'Your Location',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#4285F4',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 3,
+      },
+    });
+
+    // Add pulsing circle around user marker
+    const pulseCircle = new google.maps.Circle({
+      strokeColor: '#4285F4',
+      strokeOpacity: 0.4,
+      strokeWeight: 2,
+      fillColor: '#4285F4',
+      fillOpacity: 0.1,
+      map,
+      center: { lat: userLocation.lat, lng: userLocation.lng },
+      radius: 500, // 500 meters
+    });
+
+    userMarkerRef.current = userMarker;
+
+    return () => {
+      userMarker.setMap(null);
+      pulseCircle.setMap(null);
+    };
+  }, [map, userLocation]);
 
   // Update markers when places change
   useEffect(() => {

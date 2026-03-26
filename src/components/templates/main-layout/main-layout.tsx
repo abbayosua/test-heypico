@@ -6,6 +6,12 @@ import { ReactNode } from 'react';
 import { Header } from '@/components/organisms/header';
 import { Footer } from '@/components/organisms/footer';
 
+interface UserLocation {
+  lat: number;
+  lng: number;
+  city?: string;
+}
+
 interface MainLayoutProps {
   children: ReactNode;
   sessionId: string;
@@ -14,6 +20,8 @@ interface MainLayoutProps {
   currentProvider?: string;
   currentModel?: string;
   onSettingsChange?: () => void;
+  userLocation?: UserLocation | null;
+  onRequestLocation?: () => void;
 }
 
 export function MainLayout({
@@ -24,6 +32,8 @@ export function MainLayout({
   currentProvider,
   currentModel,
   onSettingsChange,
+  userLocation,
+  onRequestLocation,
 }: MainLayoutProps) {
   return (
     <div className="flex flex-col min-h-screen">
@@ -33,6 +43,8 @@ export function MainLayout({
         ollamaAvailable={ollamaAvailable}
         geminiAvailable={geminiAvailable}
         onSettingsChange={onSettingsChange}
+        userLocation={userLocation}
+        onRequestLocation={onRequestLocation}
       />
 
       {/* Main Content */}

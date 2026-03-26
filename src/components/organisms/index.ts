@@ -7,3 +7,4 @@ export * from './settings-sheet';
 export * from './header';
 export * from './footer';
 export * from './place-details-dialog';
+export * from './location-dialog';

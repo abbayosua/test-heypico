@@ -8,9 +8,11 @@ import { ChatPanel } from '@/components/organisms/chat-panel';
 import { MapView } from '@/components/organisms/map-view';
 import { DirectionsPanel } from '@/components/organisms/directions-panel';
 import { PlaceDetailsDialog } from '@/components/organisms/place-details-dialog';
+import { LocationDialog } from '@/components/organisms/location-dialog';
 import { useChat } from '@/hooks/use-chat';
 import { useMap } from '@/hooks/use-map';
 import { useSettings } from '@/hooks/use-settings';
+import { useLocation } from '@/hooks/use-location';
 import type { ExtractedPlace, Place } from '@/types';
 
 // Generate a session ID (in production, this would come from auth)
@@ -42,6 +44,20 @@ export default function Home() {
   const sessionId = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const isReady = Boolean(sessionId);
 
+  // Location hook
+  const {
+    location: userLocation,
+    status: locationStatus,
+    error: locationError,
+    requestPermission,
+    setLocation,
+    setLocationFromCity,
+  } = useLocation();
+
+  // Show location dialog if no location is set and status is 'prompt'
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [hasPromptedLocation, setHasPromptedLocation] = useState(false);
+
   // Hooks - only initialize when sessionId is ready
   const {
     messages,
@@ -50,7 +66,7 @@ export default function Home() {
     provider,
     model,
     sendMessage,
-  } = useChat({ sessionId });
+  } = useChat({ sessionId, userLocation });
 
   const {
     places: mapPlaces,
@@ -67,6 +83,17 @@ export default function Home() {
   } = useMap();
 
   const { status, refreshStatus } = useSettings({ sessionId });
+
+  // Show location dialog on first load if no location
+  useEffect(() => {
+    if (!hasPromptedLocation && locationStatus === 'prompt') {
+      // Use queueMicrotask to defer setState and avoid cascading renders
+      queueMicrotask(() => {
+        setShowLocationDialog(true);
+        setHasPromptedLocation(true);
+      });
+    }
+  }, [locationStatus, hasPromptedLocation]);
 
   // Combine places from chat and map
   const allPlaces = [...mapPlaces, ...chatPlaces.filter((p): p is ExtractedPlace & { location?: { lat: number; lng: number } } => 'location' in p)];
@@ -112,6 +139,11 @@ export default function Home() {
     refreshStatus();
   }, [refreshStatus]);
 
+  // Handle location dialog allow
+  const handleAllowLocation = useCallback(async () => {
+    await requestPermission();
+  }, [requestPermission]);
+
   // Show loading state until session is ready (prevents hydration mismatch)
   if (!isReady) {
     return (
@@ -129,6 +161,8 @@ export default function Home() {
       currentProvider={provider || undefined}
       currentModel={model || undefined}
       onSettingsChange={handleSettingsChange}
+      userLocation={userLocation}
+      onRequestLocation={() => setShowLocationDialog(true)}
     >
       {/* Chat Panel - Left Side */}
       <div className="w-full md:w-[400px] lg:w-[450px] h-[50vh] md:h-[calc(100vh-112px)] border-r flex flex-col">
@@ -149,6 +183,7 @@ export default function Home() {
             selectedPlace={selectedPlace}
             onPlaceSelect={handlePlaceClick}
             onDirectionsClick={handleDirectionsClick}
+            userLocation={userLocation}
           />
         </div>
 
@@ -179,6 +214,17 @@ export default function Home() {
           setShowDetails(false);
           handleDirectionsClick(place);
         }}
+      />
+
+      {/* Location Permission Dialog */}
+      <LocationDialog
+        open={showLocationDialog}
+        onOpenChange={setShowLocationDialog}
+        status={locationStatus}
+        error={locationError}
+        onAllowLocation={handleAllowLocation}
+        onSetLocation={setLocation}
+        onSetLocationFromCity={setLocationFromCity}
       />
     </MainLayout>
   );

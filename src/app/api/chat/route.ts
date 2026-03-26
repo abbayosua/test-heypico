@@ -12,6 +12,11 @@ interface ChatRequest {
   message: string;
   sessionId: string;
   conversationId?: string;
+  userLocation?: {
+    lat: number;
+    lng: number;
+    city?: string;
+  };
 }
 
 interface ChatResponse {
@@ -33,7 +38,7 @@ interface PlaceResult extends ExtractedPlace {
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { message, sessionId, conversationId } = body;
+    const { message, sessionId, conversationId, userLocation } = body;
 
     if (!message || !sessionId) {
       return NextResponse.json(
@@ -126,10 +131,25 @@ export async function POST(request: NextRequest) {
       message.toLowerCase().includes('attraction')
     ) {
       try {
-        // Search for places
-        const searchResult = await textSearch({
+        // Build search params with optional location
+        const searchParams: {
+          query: string;
+          location?: { lat: number; lng: number };
+          radius?: number;
+        } = {
           query: message,
-        });
+        };
+
+        // Add user location if available
+        if (userLocation) {
+          searchParams.location = { lat: userLocation.lat, lng: userLocation.lng };
+          searchParams.radius = 10000; // 10km radius
+        }
+
+        console.log('[Chat] Places search params:', searchParams);
+
+        // Search for places
+        const searchResult = await textSearch(searchParams);
 
         if (searchResult.places.length > 0) {
           places = searchResult.places.slice(0, 5).map((p) => ({
