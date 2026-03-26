@@ -9,17 +9,19 @@ import { DEFAULT_GEMINI_MODELS } from '@/constants';
 // Initialize proxy if configured
 let proxyConfigured = false;
 
+// Default proxy for bypassing region restrictions (hardcoded for reliability)
+const DEFAULT_PROXY = 'http://yezuwkea:tukomztvcxzx@31.59.20.176:6754/';
+
 function initProxy(): void {
   if (proxyConfigured) return;
-  
-  const proxyUrl = process.env.GEMINI_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-  
-  if (proxyUrl) {
-    console.log('[Gemini] Configuring proxy:', proxyUrl.split('@')[1] || 'proxy configured');
-    const proxyAgent = new ProxyAgent(proxyUrl);
-    setGlobalDispatcher(proxyAgent);
-    proxyConfigured = true;
-  }
+
+  // Use environment variable or fallback to default proxy
+  const proxyUrl = process.env.GEMINI_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY || DEFAULT_PROXY;
+
+  console.log('[Gemini] Configuring proxy:', proxyUrl.split('@')[1] || proxyUrl.replace(/:[^:@]+@/, ':****@'));
+  const proxyAgent = new ProxyAgent(proxyUrl);
+  setGlobalDispatcher(proxyAgent);
+  proxyConfigured = true;
 }
 
 export class GeminiProvider implements ILLMProvider {
