@@ -1,8 +1,8 @@
 // Icon Atom - Lucide Icons wrapper
 // Re-export commonly used icons
 
-export {
-  MapPin,
+import {
+  MapPin as MapPinIcon,
   Navigation,
   Search,
   Send,
@@ -30,12 +30,64 @@ export {
   Sun,
   Moon,
   Sparkles,
-  Place,
   Coffee,
   Utensils,
   Hotel,
   ShoppingBag,
   Landmark,
   TreePine,
+  Car,
+  Eye,
+  EyeOff,
+  Building2,
   type LucideIcon,
 } from 'lucide-react';
+
+// Export all icons
+export {
+  MapPinIcon as MapPin,
+  Navigation,
+  Search,
+  Send,
+  Settings,
+  Loader2,
+  MessageSquare,
+  Bot,
+  User,
+  Star,
+  Clock,
+  Phone,
+  Globe,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Check,
+  AlertCircle,
+  Info,
+  Trash2,
+  RefreshCw,
+  Menu,
+  Sun,
+  Moon,
+  Sparkles,
+  Coffee,
+  Utensils,
+  Hotel,
+  ShoppingBag,
+  Landmark,
+  TreePine,
+  Car,
+  Eye,
+  EyeOff,
+  Building2,
+  type LucideIcon,
+};
+
+// Aliases for transport modes (using available icons)
+export const Walk = MapPinIcon;
+export const Bike = MapPinIcon;
+export const Train = MapPinIcon;
+export const Place = Building2;

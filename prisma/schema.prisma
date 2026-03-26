@@ -1,27 +1,27 @@
 // Prisma Schema for AI Map Assistant
-// Supports: SQLite (local development) and PostgreSQL (Neon for production)
+// SQLite for local development - Use schema.postgres.prisma for Vercel/Neon
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // For Neon connection pooling
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // ============ CONVERSATION & MESSAGES ============
 
 model Conversation {
   id        String    @id @default(cuid())
-  sessionId String    @index
+  sessionId String
   title     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
   settings  SessionSettings?
 
+  @@index([sessionId])
   @@map("conversations")
 }
 
@@ -30,8 +30,8 @@ model Message {
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   role           String       // "user" | "assistant"
-  content        String       @db.Text
-  placesData     String?      @db.Text // JSON: extracted places
+  content        String
+  placesData     String?      // JSON: extracted places
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
@@ -49,7 +49,7 @@ model SessionSettings {
   llmProvider    String       @default("ollama") // "ollama" | "gemini"
   ollamaModel    String?
   geminiModel    String?
-  geminiApiKey   String?      @db.Text // User's Gemini API key (optional)
+  geminiApiKey   String?      // User's Gemini API key (optional)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -61,9 +61,9 @@ model SessionSettings {
 model SearchCache {
   id        String   @id @default(cuid())
   queryHash String   @unique
-  query     String   @db.Text
-  response  String   @db.Text
-  places    String   @db.Text // JSON: Google Places results
+  query     String
+  response  String
+  places    String   // JSON: Google Places results
   provider  String
   createdAt DateTime @default(now())
   expiresAt DateTime // TTL for cache invalidation

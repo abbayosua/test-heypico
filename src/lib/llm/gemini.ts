@@ -10,7 +10,7 @@ export class GeminiProvider implements ILLMProvider {
   private genAI: GoogleGenerativeAI;
   private defaultModel: string;
 
-  constructor(apiKey: string, defaultModel: string = 'gemini-2.0-flash-exp') {
+  constructor(apiKey: string, defaultModel: string = 'gemini-2.5-flash-lite') {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.defaultModel = defaultModel;
   }
