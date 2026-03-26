@@ -13,6 +13,7 @@ import { useChat } from '@/hooks/use-chat';
 import { useMap } from '@/hooks/use-map';
 import { useSettings } from '@/hooks/use-settings';
 import { useLocation } from '@/hooks/use-location';
+import { useMounted } from '@/hooks';
 import type { ExtractedPlace, Place } from '@/types';
 
 // Generate a session ID (in production, this would come from auth)
@@ -20,28 +21,55 @@ function generateSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// localStorage subscription helpers for useSyncExternalStore
-function subscribe(callback: () => void) {
-  window.addEventListener('storage', callback);
-  return () => window.removeEventListener('storage', callback);
+// Session ID storage - module level to prevent hydration mismatch
+const SESSION_STORAGE_KEY = 'map-assistant-session-id';
+let sessionIdState: string | null = null;
+let sessionIdInitialized = false;
+const sessionIdListeners = new Set<() => void>();
+
+function subscribeToSessionId(callback: () => void) {
+  sessionIdListeners.add(callback);
+  return () => sessionIdListeners.delete(callback);
 }
 
-function getSnapshot(): string {
+function getSessionIdSnapshot(): string {
+  // Return empty string during SSR and initial hydration
   if (typeof window === 'undefined') return '';
-  const stored = localStorage.getItem('map-assistant-session-id');
-  if (stored) return stored;
-  const newId = generateSessionId();
-  localStorage.setItem('map-assistant-session-id', newId);
-  return newId;
+
+  // Initialize once after hydration
+  if (!sessionIdInitialized) {
+    sessionIdInitialized = true;
+    try {
+      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (stored) {
+        sessionIdState = stored;
+      } else {
+        sessionIdState = generateSessionId();
+        // Queue saving to localStorage after current render
+        queueMicrotask(() => {
+          localStorage.setItem(SESSION_STORAGE_KEY, sessionIdState!);
+          sessionIdListeners.forEach((cb) => cb());
+        });
+      }
+    } catch {
+      sessionIdState = generateSessionId();
+    }
+  }
+
+  return sessionIdState || '';
 }
 
-function getServerSnapshot(): string {
+function getServerSessionIdSnapshot(): string {
   return '';
 }
 
 export default function Home() {
   // Session ID - use useSyncExternalStore for localStorage
-  const sessionId = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const sessionId = useSyncExternalStore(
+    subscribeToSessionId,
+    getSessionIdSnapshot,
+    getServerSessionIdSnapshot
+  );
   const isReady = Boolean(sessionId);
 
   // Location hook
@@ -53,6 +81,9 @@ export default function Home() {
     setLocation,
     setLocationFromCity,
   } = useLocation();
+
+  // Track if mounted on client (for client-only UI)
+  const mounted = useMounted();
 
   // Show location dialog if no location is set and status is 'prompt'
   const [showLocationDialog, setShowLocationDialog] = useState(false);
@@ -89,16 +120,18 @@ export default function Home() {
 
   const { status, refreshStatus } = useSettings({ sessionId });
 
-  // Show location dialog on first load if no location
+  // Show location dialog on first load if no location (only after mount)
   useEffect(() => {
+    if (!mounted) return;
     if (!hasPromptedLocation && locationStatus === 'prompt') {
-      // Use queueMicrotask to defer setState and avoid cascading renders
-      queueMicrotask(() => {
+      // Defer setState to avoid cascading renders
+      const timer = setTimeout(() => {
         setShowLocationDialog(true);
         setHasPromptedLocation(true);
-      });
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [locationStatus, hasPromptedLocation]);
+  }, [mounted, locationStatus, hasPromptedLocation]);
 
   // Add places to map when chat returns new places
   useEffect(() => {
@@ -117,12 +150,12 @@ export default function Home() {
   // Handle place click - with optional group activation
   const handlePlaceClick = useCallback((place: ExtractedPlace | Place, groupId?: string) => {
     setSelectedPlace(place);
-    
+
     // If groupId provided, activate that group
     if (groupId) {
       setActiveGroup(groupId);
     }
-    
+
     // If it's a full Place object, show details dialog
     if ('placeId' in place && place.placeId) {
       setDetailsPlace(place as Place);
@@ -137,7 +170,7 @@ export default function Home() {
       if (userLocation) {
         const origin = { lat: userLocation.lat, lng: userLocation.lng };
         const destination = { lat: place.location.lat, lng: place.location.lng };
-        
+
         await getDirections(origin, destination, 'driving', place.name);
         setShowDirections(true);
       } else {
@@ -145,7 +178,7 @@ export default function Home() {
         setShowLocationDialog(true);
       }
     }
-  }, [getDirections, userLocation, setShowLocationDialog]);
+  }, [getDirections, userLocation]);
 
   // Handle settings change
   const handleSettingsChange = useCallback(() => {

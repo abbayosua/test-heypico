@@ -31,9 +31,12 @@ export interface UseLocationReturn {
 // Storage key for persisting location
 const LOCATION_STORAGE_KEY = 'map-assistant-user-location';
 
-// In-memory location state for client-side updates
+// External store for location state
+// Initialize with null to match server-side render
 let locationState: UserLocation | null = null;
 let statusState: LocationStatus = 'prompt';
+let errorState: string | null = null;
+let initialized = false;
 const listeners = new Set<() => void>();
 
 // Subscribe to location changes
@@ -42,17 +45,17 @@ function subscribe(callback: () => void) {
   return () => listeners.delete(callback);
 }
 
-// Get current location snapshot (client)
+// Get current location snapshot
 function getLocationSnapshot(): UserLocation | null {
   return locationState;
 }
 
-// Get current status snapshot (client)
+// Get current status snapshot
 function getStatusSnapshot(): LocationStatus {
   return statusState;
 }
 
-// Get server snapshot (always returns null/idle for SSR)
+// Get server snapshot (always returns null for SSR)
 function getServerLocationSnapshot(): UserLocation | null {
   return null;
 }
@@ -66,9 +69,10 @@ function notifyListeners() {
   listeners.forEach((callback) => callback());
 }
 
-// Initialize from localStorage (runs once on client)
+// Initialize from localStorage - must be called AFTER hydration
 function initializeFromStorage() {
-  if (typeof window === 'undefined') return;
+  if (initialized || typeof window === 'undefined') return;
+  initialized = true;
 
   try {
     const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
@@ -76,18 +80,29 @@ function initializeFromStorage() {
       const parsed = JSON.parse(savedLocation) as UserLocation;
       locationState = parsed;
       statusState = 'granted';
+      notifyListeners();
     } else {
+      // Check if geolocation is available
       statusState = navigator.geolocation ? 'prompt' : 'error';
     }
   } catch {
     localStorage.removeItem(LOCATION_STORAGE_KEY);
     statusState = navigator.geolocation ? 'prompt' : 'error';
   }
-  notifyListeners();
 }
 
-// Run initialization once
-let initialized = false;
+// Save location to localStorage
+function saveLocation(loc: UserLocation | null) {
+  if (typeof window === 'undefined') return;
+  if (loc) {
+    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
+  } else {
+    localStorage.removeItem(LOCATION_STORAGE_KEY);
+  }
+}
+
+// Flag to track if we've scheduled initialization
+let initScheduled = false;
 
 export function useLocation(): UseLocationReturn {
   // Use useSyncExternalStore to prevent hydration mismatch
@@ -103,42 +118,40 @@ export function useLocation(): UseLocationReturn {
     getServerStatusSnapshot
   );
 
-  // Initialize from localStorage once on client
-  if (!initialized && typeof window !== 'undefined') {
-    initialized = true;
-    initializeFromStorage();
+  // Schedule initialization after first render (after hydration)
+  // Using useEffect timing via a flag check during render
+  if (typeof window !== 'undefined' && !initScheduled) {
+    initScheduled = true;
+    // Use setTimeout to ensure this runs after hydration completes
+    // This is the earliest we can safely access localStorage without
+    // causing hydration mismatch
+    setTimeout(initializeFromStorage, 0);
   }
 
-  const [error, setError] = useState<string | null>(null);
-
-  // Save location to localStorage
-  const saveLocation = useCallback((loc: UserLocation | null) => {
-    if (typeof window === 'undefined') return;
-    if (loc) {
-      localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
-    } else {
-      localStorage.removeItem(LOCATION_STORAGE_KEY);
-    }
-  }, []);
+  const [error, setError] = useState<string | null>(errorState);
 
   // Set location and persist
   const setLocation = useCallback((loc: UserLocation | null) => {
     locationState = loc;
     statusState = loc ? 'granted' : 'prompt';
+    errorState = null;
     saveLocation(loc);
+    setError(null);
     notifyListeners();
-  }, [saveLocation]);
+  }, []);
 
   // Request geolocation permission
   const requestPermission = useCallback(async () => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
       statusState = 'error';
+      errorState = 'Geolocation is not supported by your browser';
       notifyListeners();
-      setError('Geolocation is not supported by your browser');
+      setError(errorState);
       return false;
     }
 
     statusState = 'loading';
+    errorState = null;
     notifyListeners();
     setError(null);
 
@@ -173,12 +186,11 @@ export function useLocation(): UseLocationReturn {
         (err) => {
           console.error('Geolocation error:', err);
           statusState = 'denied';
+          errorState = err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied'
+            : 'Failed to get your location';
           notifyListeners();
-          setError(
-            err.code === err.PERMISSION_DENIED
-              ? 'Location permission denied'
-              : 'Failed to get your location'
-          );
+          setError(errorState);
           resolve(false);
         },
         {
@@ -195,6 +207,7 @@ export function useLocation(): UseLocationReturn {
     if (!city.trim()) return false;
 
     statusState = 'loading';
+    errorState = null;
     notifyListeners();
     setError(null);
 
@@ -216,15 +229,17 @@ export function useLocation(): UseLocationReturn {
         return true;
       } else {
         statusState = 'error';
+        errorState = 'City not found';
         notifyListeners();
-        setError('City not found');
+        setError(errorState);
         return false;
       }
     } catch (err) {
       console.error('Geocoding error:', err);
       statusState = 'error';
+      errorState = 'Failed to find city';
       notifyListeners();
-      setError('Failed to find city');
+      setError(errorState);
       return false;
     }
   }, [setLocation]);
