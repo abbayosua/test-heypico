@@ -23,16 +23,24 @@ export async function textSearch(params: TextSearchParams): Promise<PlaceSearchR
   const apiKey = getApiKey();
 
   try {
+    // Build params - only include location if provided
+    const requestParams: Record<string, unknown> = {
+      query: params.query,
+      radius: params.radius || 5000,
+      key: apiKey,
+    };
+
+    // Only add location if it's provided
+    if (params.location) {
+      requestParams.location = { lat: params.location.lat, lng: params.location.lng };
+    }
+
+    if (params.type) {
+      requestParams.type = params.type;
+    }
+
     const response = await client.textSearch({
-      params: {
-        query: params.query,
-        location: params.location
-          ? { lat: params.location.lat, lng: params.location.lng }
-          : undefined,
-        radius: params.radius || 5000,
-        type: params.type,
-        key: apiKey,
-      },
+      params: requestParams,
     });
 
     if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
