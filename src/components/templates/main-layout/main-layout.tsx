@@ -27,10 +27,6 @@ interface MainLayoutProps {
 export function MainLayout({
   children,
   sessionId,
-  ollamaAvailable = false,
-  geminiAvailable = false,
-  currentProvider,
-  currentModel,
   onSettingsChange,
   userLocation,
   onRequestLocation,
@@ -40,8 +36,6 @@ export function MainLayout({
       {/* Header */}
       <Header
         sessionId={sessionId}
-        ollamaAvailable={ollamaAvailable}
-        geminiAvailable={geminiAvailable}
         onSettingsChange={onSettingsChange}
         userLocation={userLocation}
         onRequestLocation={onRequestLocation}
@@ -53,7 +47,7 @@ export function MainLayout({
       </main>
 
       {/* Footer */}
-      <Footer provider={currentProvider} model={currentModel} />
+      <Footer />
     </div>
   );
 }

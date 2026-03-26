@@ -6,7 +6,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AI Map Assistant',
+  title: 'Abbayosua - Heypico Test',
   description: 'Find places to go and eat with AI-powered recommendations',
 };
 
