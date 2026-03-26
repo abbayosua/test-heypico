@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
           settings: {
             create: {
               sessionId,
-              llmProvider: 'ollama',
+              llmProvider: 'gemini', // Default to Gemini since Ollama may not be available
             },
           },
         },
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Get settings
     const settings = conversation.settings;
-    const llmProvider = settings?.llmProvider || 'ollama';
+    const llmProvider = settings?.llmProvider || 'gemini';
 
     // Build conversation history
     const history = conversation.messages

@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { LLMProviderType } from '@/types';
 
+// Default provider - use gemini if Ollama is not available
+const DEFAULT_PROVIDER: LLMProviderType = 'gemini';
+
 // Get settings for a session
 export async function GET(request: NextRequest) {
   try {
@@ -25,11 +28,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (!conversation?.settings) {
-      // Return default settings
+      // Return default settings - use Gemini by default since Ollama is not always available
       return NextResponse.json({
-        llmProvider: 'ollama',
+        llmProvider: DEFAULT_PROVIDER,
         ollamaModel: process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2',
-        geminiModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash-exp',
+        geminiModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite',
         geminiApiKey: null,
       });
     }
@@ -77,7 +80,7 @@ export async function PUT(request: NextRequest) {
           settings: {
             create: {
               sessionId,
-              llmProvider: llmProvider || 'ollama',
+              llmProvider: llmProvider || DEFAULT_PROVIDER,
               ollamaModel,
               geminiModel,
               geminiApiKey,
@@ -103,7 +106,7 @@ export async function PUT(request: NextRequest) {
         data: {
           sessionId,
           conversationId: conversation.id,
-          llmProvider: llmProvider || 'ollama',
+          llmProvider: llmProvider || DEFAULT_PROVIDER,
           ollamaModel,
           geminiModel,
           geminiApiKey,

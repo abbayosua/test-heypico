@@ -29,12 +29,12 @@ export class GeminiProvider implements ILLMProvider {
   private genAI: GoogleGenerativeAI;
   private defaultModel: string;
 
-  constructor(apiKey: string, defaultModel: string = 'gemini-2.5-flash-lite') {
+  constructor(apiKey: string, defaultModel?: string) {
     // Initialize proxy before making any requests
     initProxy();
     
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.defaultModel = defaultModel;
+    this.defaultModel = defaultModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite';
   }
 
   async chat(messages: ChatMessage[]): Promise<string> {

@@ -97,7 +97,7 @@ export async function chatWithFallback(
       try {
         const model = preferredProvider === 'ollama' 
           ? (ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2')
-          : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash-exp');
+          : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite');
         
         // Use the appropriate method based on provider type
         if (preferredProvider === 'ollama') {
@@ -130,7 +130,7 @@ export async function chatWithFallback(
       try {
         const model = fallbackProvider === 'ollama'
           ? (ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2')
-          : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash-exp');
+          : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite');
 
         if (fallbackProvider === 'ollama') {
           const ollamaProv = fallbackProv as OllamaProvider;
@@ -152,8 +152,8 @@ export async function chatWithFallback(
     response: FALLBACK_RESPONSE,
     provider: preferredProvider,
     model: preferredProvider === 'ollama' 
-      ? (ollamaModel || 'llama3.2')
-      : (geminiModel || 'gemini-2.0-flash-exp'),
+      ? (ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2')
+      : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite'),
   };
 }
 
