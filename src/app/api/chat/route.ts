@@ -51,6 +51,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // If no conversation found by ID, try to find by sessionId
+    if (!conversation) {
+      conversation = await db.conversation.findFirst({
+        where: { sessionId },
+        include: { messages: true, settings: true },
+      });
+    }
+
+    // If still no conversation, create a new one
     if (!conversation) {
       conversation = await db.conversation.create({
         data: {

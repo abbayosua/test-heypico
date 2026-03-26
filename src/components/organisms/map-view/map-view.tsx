@@ -2,8 +2,7 @@
 
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { useEffect, useRef, useState } from 'react';
 import { MapPin, Navigation, ExternalLink, X } from '@/components/atoms/icon';
 import { Button } from '@/components/atoms/button';
 import { Badge } from '@/components/atoms/badge';
@@ -26,6 +25,13 @@ interface MapMarker {
   infoWindow: google.maps.InfoWindow;
 }
 
+// Global callback name for Google Maps
+const CALLBACK_NAME = 'initGoogleMapsCallback';
+
+// Track if we've set up the global callback
+let globalCallbackSetup = false;
+let resolveCallback: (() => void) | null = null;
+
 export function MapView({
   places = [],
   selectedPlace,
@@ -39,52 +45,124 @@ export function MapView({
   const [error, setError] = useState<string | null>(null);
   const [showInfoCard, setShowInfoCard] = useState(false);
   const [infoCardPlace, setInfoCardPlace] = useState<ExtractedPlace | Place | null>(null);
+  const [mapsReady, setMapsReady] = useState(false);
+  const initAttemptedRef = useRef(false);
 
-  // Initialize map
+  // Fetch API key and set up Google Maps
   useEffect(() => {
-    const initMap = async () => {
-      try {
-        // Check if API key exists
-        const configRes = await fetch('/api/map-config');
-        const config = await configRes.json();
+    let mounted = true;
 
-        if (!config.hasApiKey) {
+    const setupGoogleMaps = async () => {
+      try {
+        const res = await fetch('/api/map-config');
+        const config = await res.json();
+
+        if (!mounted) return;
+
+        if (!config.hasApiKey || !config.apiKey) {
           setError('Google Maps API key not configured');
           setIsLoading(false);
           return;
         }
 
-        const loader = new Loader({
-          apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-          version: 'weekly',
-          libraries: ['places'],
+        // Check if Google Maps is already loaded
+        if (window.google?.maps?.Map) {
+          setMapsReady(true);
+          return;
+        }
+
+        // Set up global callback if not already done
+        if (!globalCallbackSetup) {
+          globalCallbackSetup = true;
+          (window as unknown as Record<string, unknown>)[CALLBACK_NAME] = () => {
+            if (resolveCallback) {
+              resolveCallback();
+              resolveCallback = null;
+            }
+          };
+        }
+
+        // Create a promise that resolves when Google Maps is ready
+        const mapsPromise = new Promise<void>((resolve) => {
+          // Check if already loaded
+          if (window.google?.maps?.Map) {
+            resolve();
+            return;
+          }
+          resolveCallback = resolve;
         });
 
-        await loader.load();
+        // Load the Google Maps script
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places&callback=${CALLBACK_NAME}`;
+        script.async = true;
+        script.defer = true;
 
-        if (mapRef.current) {
-          const googleMap = new google.maps.Map(mapRef.current, {
-            center: DEFAULT_MAP_CENTER,
-            zoom: DEFAULT_MAP_ZOOM,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: true,
-          });
+        document.head.appendChild(script);
 
-          setMap(googleMap);
-          setIsLoading(false);
+        // Wait for Google Maps to be ready
+        await mapsPromise;
+
+        if (mounted) {
+          setMapsReady(true);
         }
       } catch (err) {
-        console.error('Map initialization error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load map');
-        setIsLoading(false);
+        console.error('Failed to setup Google Maps:', err);
+        if (mounted) {
+          setError('Failed to load map configuration');
+          setIsLoading(false);
+        }
       }
     };
 
-    initMap();
+    setupGoogleMaps();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // Store markers in ref to avoid re-render issues
+  // Initialize map when Google Maps is ready
+  useEffect(() => {
+    if (!mapsReady || !mapRef.current || initAttemptedRef.current) {
+      return;
+    }
+
+    // Double-check that google.maps.Map is actually available
+    if (typeof google.maps.Map !== 'function') {
+      console.error('google.maps.Map is not a constructor');
+      // Defer state update to avoid cascading renders
+      queueMicrotask(() => {
+        setError('Google Maps failed to initialize properly');
+        setIsLoading(false);
+      });
+      return;
+    }
+
+    initAttemptedRef.current = true;
+
+    try {
+      const googleMap = new google.maps.Map(mapRef.current, {
+        center: DEFAULT_MAP_CENTER,
+        zoom: DEFAULT_MAP_ZOOM,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+      });
+
+      setMap(googleMap);
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Map initialization error:', err);
+      // Defer state update to avoid cascading renders
+      queueMicrotask(() => {
+        setError(err instanceof Error ? err.message : 'Failed to load map');
+        setIsLoading(false);
+      });
+    }
+  }, [mapsReady]);
+
+  // Store markers in ref
   const markersRef = useRef<MapMarker[]>([]);
 
   // Update markers when places change
@@ -98,11 +176,8 @@ export function MapView({
     });
     markersRef.current = [];
 
-    if (places.length === 0) {
-      return;
-    }
+    if (places.length === 0) return;
 
-    // Create new markers
     const newMarkers: MapMarker[] = [];
     const bounds = new google.maps.LatLngBounds();
 
@@ -132,7 +207,6 @@ export function MapView({
       });
 
       marker.addListener('click', () => {
-        // Close all other info windows
         newMarkers.forEach(({ infoWindow: iw }) => iw.close());
         infoWindow.open(map, marker);
         setInfoCardPlace(place);
@@ -144,9 +218,8 @@ export function MapView({
       newMarkers.push({ place, marker, infoWindow });
     });
 
-    // Fit map to show all markers
     if (newMarkers.length > 0) {
-      map.fitBounds(bounds, { padding: 50 });
+      map.fitBounds(bounds, 50);
     }
 
     markersRef.current = newMarkers;
@@ -169,7 +242,6 @@ export function MapView({
     map.panTo({ lat: location.lat, lng: location.lng });
     map.setZoom(15);
 
-    // Open the info window for selected place
     const markerData = markersRef.current.find(
       (m) => m.place.name === selectedPlace.name
     );
@@ -179,14 +251,7 @@ export function MapView({
     }
   }, [map, selectedPlace]);
 
-  if (isLoading) {
-    return (
-      <div className={`relative ${className || ''}`}>
-        <Skeleton className="w-full h-full" />
-      </div>
-    );
-  }
-
+  // Error state
   if (error) {
     return (
       <div className={`flex items-center justify-center bg-muted ${className || ''}`}>
@@ -202,12 +267,20 @@ export function MapView({
   }
 
   return (
-    <div className={`relative ${className || ''}`}>
-      <div ref={mapRef} className="w-full h-full" />
+    <div className={`relative w-full h-full ${className || ''}`}>
+      {/* Map container */}
+      <div ref={mapRef} className="absolute inset-0 w-full h-full" />
+
+      {/* Loading skeleton */}
+      {isLoading && (
+        <div className="absolute inset-0 pointer-events-none">
+          <Skeleton className="w-full h-full" />
+        </div>
+      )}
 
       {/* Info Card Overlay */}
       {showInfoCard && infoCardPlace && (
-        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80">
+        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-10">
           <Card className="shadow-lg">
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-2">
