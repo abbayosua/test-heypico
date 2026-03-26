@@ -49,8 +49,23 @@ export class LLM7Provider implements ILLMProvider {
       }
 
       const data = await response.json();
-      console.log('[LLM7] Response received successfully');
-      return data.choices?.[0]?.message?.content || '';
+      console.log('[LLM7] Full response:', JSON.stringify(data).substring(0, 500));
+      
+      // Check if response contains an error
+      if (data.error) {
+        console.error('[LLM7] API returned error:', data.error);
+        throw new Error(`LLM7 API error: ${data.error.message || JSON.stringify(data.error)}`);
+      }
+      
+      // Check if choices exist and have content
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        console.error('[LLM7] No content in response:', JSON.stringify(data));
+        throw new Error('LLM7 returned empty response');
+      }
+      
+      console.log('[LLM7] Response content length:', content.length);
+      return content;
     } catch (error) {
       console.error('[LLM7] Chat error:', error);
       throw new Error(`LLM7 chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
