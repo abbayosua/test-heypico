@@ -114,22 +114,62 @@ export async function POST(request: NextRequest) {
     // Extract places from the response
     let places: PlaceResult[] = [];
 
-    // If the query is about finding places, do a places search
-    if (
-      message.toLowerCase().includes('find') ||
-      message.toLowerCase().includes('where') ||
-      message.toLowerCase().includes('restaurant') ||
-      message.toLowerCase().includes('cafe') ||
-      message.toLowerCase().includes('place') ||
-      message.toLowerCase().includes('eat') ||
-      message.toLowerCase().includes('visit') ||
-      message.toLowerCase().includes('hotel') ||
-      message.toLowerCase().includes('shop') ||
-      message.toLowerCase().includes('bar') ||
-      message.toLowerCase().includes('museum') ||
-      message.toLowerCase().includes('park') ||
-      message.toLowerCase().includes('attraction')
-    ) {
+    // Check if the query is about finding places
+    const lowerMessage = message.toLowerCase();
+    const isPlaceQuery = 
+      // Location/search patterns
+      lowerMessage.includes('near me') ||
+      lowerMessage.includes('nearby') ||
+      lowerMessage.includes('around me') ||
+      lowerMessage.includes('close to me') ||
+      lowerMessage.includes('in my area') ||
+      lowerMessage.includes('local') ||
+      // Action verbs
+      lowerMessage.includes('find') ||
+      lowerMessage.includes('search') ||
+      lowerMessage.includes('looking for') ||
+      lowerMessage.includes('look for') ||
+      lowerMessage.includes('where') ||
+      lowerMessage.includes('recommend') ||
+      // Place types
+      lowerMessage.includes('restaurant') ||
+      lowerMessage.includes('cafe') ||
+      lowerMessage.includes('coffee') ||
+      lowerMessage.includes('place') ||
+      lowerMessage.includes('eat') ||
+      lowerMessage.includes('food') ||
+      lowerMessage.includes('dinner') ||
+      lowerMessage.includes('lunch') ||
+      lowerMessage.includes('breakfast') ||
+      lowerMessage.includes('visit') ||
+      lowerMessage.includes('hotel') ||
+      lowerMessage.includes('shop') ||
+      lowerMessage.includes('store') ||
+      lowerMessage.includes('mall') ||
+      lowerMessage.includes('market') ||
+      lowerMessage.includes('bar') ||
+      lowerMessage.includes('pub') ||
+      lowerMessage.includes('club') ||
+      lowerMessage.includes('museum') ||
+      lowerMessage.includes('park') ||
+      lowerMessage.includes('beach') ||
+      lowerMessage.includes('gym') ||
+      lowerMessage.includes('hospital') ||
+      lowerMessage.includes('pharmacy') ||
+      lowerMessage.includes('bank') ||
+      lowerMessage.includes('atm') ||
+      lowerMessage.includes('gas station') ||
+      lowerMessage.includes('petrol') ||
+      lowerMessage.includes('attraction') ||
+      lowerMessage.includes('tourist') ||
+      // Superlatives often used with places
+      lowerMessage.includes('best') ||
+      lowerMessage.includes('top') ||
+      lowerMessage.includes('good') ||
+      lowerMessage.includes('great') ||
+      lowerMessage.includes('popular');
+
+    if (isPlaceQuery) {
       try {
         // Build search params with optional location
         const searchParams: {
