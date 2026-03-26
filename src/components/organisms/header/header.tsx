@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useMounted } from '@/hooks';
 
 interface UserLocation {
   lat: number;
@@ -33,6 +34,20 @@ export function Header({
   userLocation,
   onRequestLocation,
 }: HeaderProps) {
+  // Track if component is mounted to prevent hydration mismatch
+  const mounted = useMounted();
+
+  // Default values for SSR to prevent hydration mismatch
+  const locationText = mounted
+    ? (userLocation ? (userLocation.city || 'Location Set') : 'Set Location')
+    : 'Set Location';
+
+  const tooltipText = mounted
+    ? (userLocation
+        ? `Location: ${userLocation.city || `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}`}`
+        : 'Click to set your location')
+    : 'Click to set your location';
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4">
@@ -57,14 +72,12 @@ export function Header({
               >
                 <Navigation className="h-4 w-4" />
                 <span className="hidden sm:inline max-w-[120px] truncate">
-                  {userLocation ? (userLocation.city || 'Location Set') : 'Set Location'}
+                  {locationText}
                 </span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {userLocation
-                ? `Location: ${userLocation.city || `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}`}`
-                : 'Click to set your location'}
+              {tooltipText}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

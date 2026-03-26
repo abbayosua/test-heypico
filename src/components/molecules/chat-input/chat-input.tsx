@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useMounted } from '@/hooks';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -38,6 +39,8 @@ export function ChatInput({
   const [message, setMessage] = useState('');
   const [showLocationWarning, setShowLocationWarning] = useState(false);
   const [pendingMessage, setPendingMessage] = useState('');
+  // Track if component is mounted to prevent hydration mismatch
+  const mounted = useMounted();
 
   const handleSubmit = useCallback(() => {
     if (message.trim() && !isLoading && !disabled) {
@@ -77,11 +80,15 @@ export function ChatInput({
     onRequestLocation?.();
   }, [onRequestLocation]);
 
+  // Determine if we should show the location warning
+  // Only show after mount to prevent hydration mismatch
+  const showLocationBanner = mounted && !hasLocation;
+
   return (
     <>
       <div className="flex flex-col gap-2 p-4 border-t bg-background">
-        {/* Location Warning Banner */}
-        {!hasLocation && (
+        {/* Location Warning Banner - only render after mount */}
+        {showLocationBanner && (
           <Alert className="py-2 px-3">
             <MapPin className="h-4 w-4" />
             <AlertDescription className="text-xs flex items-center justify-between w-full">
@@ -104,7 +111,7 @@ export function ChatInput({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={hasLocation ? placeholder : 'Set location first for better results...'}
+            placeholder={mounted && !hasLocation ? 'Set location first for better results...' : placeholder}
             disabled={disabled || isLoading}
             className="min-h-[44px] max-h-32 resize-none"
             rows={1}

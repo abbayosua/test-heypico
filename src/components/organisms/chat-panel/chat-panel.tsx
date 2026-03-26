@@ -2,12 +2,13 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { ChatInput } from '@/components/molecules/chat-input';
 import { ChatMessage } from '@/components/molecules/chat-message';
 import { TypingIndicator } from '@/components/molecules/typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/atoms/skeleton';
+import { useMounted } from '@/hooks';
 import type { ExtractedPlace, Message, UserLocation } from '@/types';
 
 interface ChatPanelProps {
@@ -31,6 +32,8 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Track if component is mounted to prevent hydration mismatch
+  const mounted = useMounted();
   const hasLocation = Boolean(userLocation);
 
   // Scroll to bottom function
@@ -45,6 +48,10 @@ export function ChatPanel({
     scrollToBottom();
   }, [messages, isLoading, scrollToBottom]);
 
+  // Only disable example buttons if mounted and no location
+  // This prevents hydration mismatch
+  const disableExamples = mounted && !hasLocation;
+
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
       {/* Messages Area */}
@@ -56,23 +63,23 @@ export function ChatPanel({
                 <h2 className="text-2xl font-bold">AI Location Assistant</h2>
                 <p className="text-muted-foreground">
                   Ask me about places to visit, restaurants, attractions, and more.
-                  I'll help you find the best spots!
+                  I&apos;ll help you find the best spots!
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center mt-4">
                   <ExamplePrompt
                     text="Best restaurants near me"
                     onClick={onSendMessage}
-                    disabled={!hasLocation}
+                    disabled={disableExamples}
                   />
                   <ExamplePrompt
                     text="Best coffee shops near me"
                     onClick={onSendMessage}
-                    disabled={!hasLocation}
+                    disabled={disableExamples}
                   />
                   <ExamplePrompt
                     text="Tourist attractions near me"
                     onClick={onSendMessage}
-                    disabled={!hasLocation}
+                    disabled={disableExamples}
                   />
                 </div>
               </div>
