@@ -126,22 +126,40 @@ export async function chatWithFallback(
 
   // Try each provider in order
   for (const providerType of providerOrder) {
+    console.log(`[Chat] Trying provider: ${providerType}`);
     const provider = getProvider(providerType, config);
     
-    if (provider) {
-      try {
-        const isAvailable = await provider.isAvailable();
-        if (isAvailable) {
-          const model = getDefaultModel(providerType, config);
-          const response = await provider.chatWithModel(model, messages);
-          return { response, provider: providerType, model };
+    if (!provider) {
+      console.log(`[Chat] Provider ${providerType} not available (no instance)`);
+      continue;
+    }
+    
+    try {
+      const isAvailable = await provider.isAvailable();
+      console.log(`[Chat] Provider ${providerType} isAvailable: ${isAvailable}`);
+      
+      if (isAvailable) {
+        const model = getDefaultModel(providerType, config);
+        console.log(`[Chat] Calling ${providerType}.chatWithModel with model: ${model}`);
+        const response = await provider.chatWithModel(model, messages);
+        
+        // Validate response
+        if (!response || response.trim() === '') {
+          console.error(`[Chat] ${providerType} returned empty response`);
+          continue;
         }
-      } catch (error) {
-        console.error(`${providerType} chat failed:`, error);
+        
+        console.log(`[Chat] ${providerType} response received, length: ${response.length}`);
+        return { response, provider: providerType, model };
       }
+    } catch (error) {
+      console.error(`[Chat] ${providerType} chat failed:`, error instanceof Error ? error.message : error);
+      console.error(`[Chat] ${providerType} error stack:`, error instanceof Error ? error.stack : 'No stack');
     }
   }
 
+  console.log('[Chat] All providers failed, returning fallback response');
+  
   // All providers failed
   return {
     response: FALLBACK_RESPONSE,
