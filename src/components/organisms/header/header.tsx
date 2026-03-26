@@ -2,8 +2,7 @@
 
 'use client';
 
-import { MapPin, Menu } from '@/components/atoms/icon';
-import { Button } from '@/components/atoms/button';
+import { MapPin } from '@/components/atoms/icon';
 import { StatusIndicator } from '@/components/molecules/status-indicator';
 import { SettingsSheet } from '@/components/organisms/settings-sheet';
 

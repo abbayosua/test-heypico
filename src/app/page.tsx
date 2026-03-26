@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { MainLayout } from '@/components/templates';
 import { ChatPanel } from '@/components/organisms/chat-panel';
 import { MapView } from '@/components/organisms/map-view';
@@ -18,18 +18,31 @@ function generateSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export default function Home() {
-  // Session ID (persisted in localStorage) - use lazy initialization
-  const [sessionId] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    const stored = localStorage.getItem('map-assistant-session-id');
-    if (stored) return stored;
-    const newId = generateSessionId();
-    localStorage.setItem('map-assistant-session-id', newId);
-    return newId;
-  });
+// localStorage subscription helpers for useSyncExternalStore
+function subscribe(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
 
-  // Hooks
+function getSnapshot(): string {
+  if (typeof window === 'undefined') return '';
+  const stored = localStorage.getItem('map-assistant-session-id');
+  if (stored) return stored;
+  const newId = generateSessionId();
+  localStorage.setItem('map-assistant-session-id', newId);
+  return newId;
+}
+
+function getServerSnapshot(): string {
+  return '';
+}
+
+export default function Home() {
+  // Session ID - use useSyncExternalStore for localStorage
+  const sessionId = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isReady = Boolean(sessionId);
+
+  // Hooks - only initialize when sessionId is ready
   const {
     messages,
     places: chatPlaces,
@@ -37,8 +50,6 @@ export default function Home() {
     provider,
     model,
     sendMessage,
-    clearChat,
-    setMessages,
   } = useChat({ sessionId });
 
   const {
@@ -55,10 +66,7 @@ export default function Home() {
     clearDirections,
   } = useMap();
 
-  const {
-    status,
-    refreshStatus,
-  } = useSettings({ sessionId });
+  const { status, refreshStatus } = useSettings({ sessionId });
 
   // Combine places from chat and map
   const allPlaces = [...mapPlaces, ...chatPlaces.filter((p): p is ExtractedPlace & { location?: { lat: number; lng: number } } => 'location' in p)];
@@ -91,8 +99,6 @@ export default function Home() {
   // Handle directions click
   const handleDirectionsClick = useCallback(async (place: ExtractedPlace | Place) => {
     if ('location' in place && place.location) {
-      // For now, use a placeholder origin (user's location would be ideal)
-      // In production, you'd use the user's current location
       const origin = 'Current location';
       const destination = place.address || `${place.location.lat},${place.location.lng}`;
       
@@ -106,9 +112,13 @@ export default function Home() {
     refreshStatus();
   }, [refreshStatus]);
 
-  // Don't render until session is ready
-  if (!sessionId) {
-    return null;
+  // Show loading state until session is ready (prevents hydration mismatch)
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (

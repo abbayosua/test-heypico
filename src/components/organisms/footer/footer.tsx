@@ -15,8 +15,8 @@ export function Footer({ provider, model }: FooterProps) {
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <div className="flex items-center gap-1">
           <Sparkles className="h-4 w-4" />
-          <span>Powered by {provider || 'Ollama'}</span>
-          {model && <span className="text-xs">({model})</span>}
+          <span>Powered by {provider || 'AI'}</span>
+          {model && <span className="text-xs opacity-70">({model})</span>}
         </div>
         <div className="flex items-center gap-1">
           <MapPin className="h-4 w-4" />
