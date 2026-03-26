@@ -34,6 +34,7 @@ export async function getDirections(request: DirectionsRequest): Promise<Directi
       summary: route.summary,
       distance: route.legs[0]?.distance?.text || '',
       duration: route.legs[0]?.duration?.text || '',
+      polyline: route.overview_polyline?.points || '',
       steps: (route.legs[0]?.steps || []).map((step): DirectionsStep => ({
         distance: step.distance?.text || '',
         duration: step.duration?.text || '',

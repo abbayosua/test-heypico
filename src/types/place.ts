@@ -70,6 +70,7 @@ export interface DirectionsRoute {
   distance: string;
   duration: string;
   steps: DirectionsStep[];
+  polyline?: string; // Encoded polyline for rendering on map
 }
 
 export interface GeocodeResult {

@@ -15,7 +15,8 @@ interface UseMapReturn {
   directionsOrigin: string | null;
   directionsDestination: string | null;
   googleMapsUrl: string | null;
-  getDirections: (origin: string | { lat: number; lng: number }, destination: string | { lat: number; lng: number }, travelMode?: 'driving' | 'walking' | 'bicycling' | 'transit') => Promise<void>;
+  directionsPolyline: string | null;
+  getDirections: (origin: string | { lat: number; lng: number }, destination: string | { lat: number; lng: number }, travelMode?: 'driving' | 'walking' | 'bicycling' | 'transit', destinationName?: string) => Promise<void>;
   clearDirections: () => void;
   searchPlaces: (query: string) => Promise<void>;
   getPlaceDetails: (placeId: string) => Promise<Place | null>;
@@ -30,11 +31,13 @@ export function useMap(): UseMapReturn {
   const [directionsOrigin, setDirectionsOrigin] = useState<string | null>(null);
   const [directionsDestination, setDirectionsDestination] = useState<string | null>(null);
   const [googleMapsUrl, setGoogleMapsUrl] = useState<string | null>(null);
+  const [directionsPolyline, setDirectionsPolyline] = useState<string | null>(null);
 
   const getDirections = useCallback(async (
     origin: string | { lat: number; lng: number },
     destination: string | { lat: number; lng: number },
-    travelMode: 'driving' | 'walking' | 'bicycling' | 'transit' = 'driving'
+    travelMode: 'driving' | 'walking' | 'bicycling' | 'transit' = 'driving',
+    destinationName?: string
   ) => {
     setDirectionsLoading(true);
     try {
@@ -49,9 +52,14 @@ export function useMap(): UseMapReturn {
         setDirections(data.routes);
         setGoogleMapsUrl(data.googleMapsUrl);
         
+        // Set the first route's polyline for map display
+        if (data.routes && data.routes.length > 0 && data.routes[0].polyline) {
+          setDirectionsPolyline(data.routes[0].polyline);
+        }
+        
         // Set origin and destination strings for display
-        setDirectionsOrigin(typeof origin === 'string' ? origin : `${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`);
-        setDirectionsDestination(typeof destination === 'string' ? destination : `${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`);
+        setDirectionsOrigin(typeof origin === 'string' ? origin : 'Your Location');
+        setDirectionsDestination(typeof destination === 'string' ? destination : (destinationName || 'Selected Place'));
       }
     } catch (error) {
       console.error('Failed to get directions:', error);
@@ -65,6 +73,7 @@ export function useMap(): UseMapReturn {
     setDirectionsOrigin(null);
     setDirectionsDestination(null);
     setGoogleMapsUrl(null);
+    setDirectionsPolyline(null);
   }, []);
 
   const searchPlaces = useCallback(async (query: string) => {
@@ -130,6 +139,7 @@ export function useMap(): UseMapReturn {
     directionsOrigin,
     directionsDestination,
     googleMapsUrl,
+    directionsPolyline,
     getDirections,
     clearDirections,
     searchPlaces,

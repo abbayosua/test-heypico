@@ -23,6 +23,7 @@ interface MapViewProps {
   onPlaceSelect?: (place: ExtractedPlace | Place) => void;
   onDirectionsClick?: (place: ExtractedPlace | Place) => void;
   userLocation?: UserLocation | null;
+  directionsPolyline?: string | null;
   className?: string;
 }
 
@@ -45,6 +46,7 @@ export function MapView({
   onPlaceSelect,
   onDirectionsClick,
   userLocation,
+  directionsPolyline,
   className,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,7 @@ export function MapView({
 
         // Load the Google Maps script
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places&callback=${CALLBACK_NAME}`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=places,geometry&callback=${CALLBACK_NAME}`;
         script.async = true;
         script.defer = true;
 
@@ -178,6 +180,48 @@ export function MapView({
   // Store markers in ref
   const markersRef = useRef<MapMarker[]>([]);
   const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
+
+  // Render directions polyline
+  useEffect(() => {
+    if (!map) return;
+
+    // Remove existing polyline
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
+
+    if (!directionsPolyline) return;
+
+    // Decode and render the polyline
+    const path = google.maps.geometry?.encoding?.decodePath(directionsPolyline);
+    if (!path) {
+      // If geometry library not loaded, we need to add it
+      console.warn('Google Maps geometry library not loaded');
+      return;
+    }
+
+    const polyline = new google.maps.Polyline({
+      path,
+      geodesic: true,
+      strokeColor: '#4285F4',
+      strokeOpacity: 1.0,
+      strokeWeight: 5,
+      map,
+    });
+
+    polylineRef.current = polyline;
+
+    // Fit map to show the entire route
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach((point) => bounds.extend(point));
+    map.fitBounds(bounds, 50);
+
+    return () => {
+      polyline.setMap(null);
+    };
+  }, [map, directionsPolyline]);
 
   // Add user location marker
   useEffect(() => {

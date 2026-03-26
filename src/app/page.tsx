@@ -78,6 +78,7 @@ export default function Home() {
     directionsOrigin,
     directionsDestination,
     googleMapsUrl,
+    directionsPolyline,
     getDirections,
     clearDirections,
   } = useMap();
@@ -126,13 +127,19 @@ export default function Home() {
   // Handle directions click
   const handleDirectionsClick = useCallback(async (place: ExtractedPlace | Place) => {
     if ('location' in place && place.location) {
-      const origin = 'Current location';
-      const destination = place.address || `${place.location.lat},${place.location.lng}`;
-      
-      await getDirections(origin, destination);
-      setShowDirections(true);
+      // Use user's actual location if available, otherwise prompt
+      if (userLocation) {
+        const origin = { lat: userLocation.lat, lng: userLocation.lng };
+        const destination = { lat: place.location.lat, lng: place.location.lng };
+        
+        await getDirections(origin, destination, 'driving', place.name);
+        setShowDirections(true);
+      } else {
+        // No user location - prompt user to set location first
+        setShowLocationDialog(true);
+      }
     }
-  }, [getDirections]);
+  }, [getDirections, userLocation, setShowLocationDialog]);
 
   // Handle settings change
   const handleSettingsChange = useCallback(() => {
@@ -184,6 +191,7 @@ export default function Home() {
             onPlaceSelect={handlePlaceClick}
             onDirectionsClick={handleDirectionsClick}
             userLocation={userLocation}
+            directionsPolyline={directionsPolyline}
           />
         </div>
 
