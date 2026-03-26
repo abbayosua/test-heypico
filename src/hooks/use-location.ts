@@ -23,7 +23,7 @@ export interface UseLocationReturn {
   location: UserLocation | null;
   status: LocationStatus;
   error: string | null;
-  requestPermission: () => Promise<void>;
+  requestPermission: () => Promise<boolean>;
   setLocation: (location: UserLocation | null) => void;
   setLocationFromCity: (city: string) => Promise<boolean>;
 }
@@ -82,13 +82,13 @@ export function useLocation(): UseLocationReturn {
     if (!navigator.geolocation) {
       setStatus('error');
       setError('Geolocation is not supported by your browser');
-      return;
+      return false;
     }
 
     setStatus('loading');
     setError(null);
 
-    return new Promise<void>((resolve) => {
+    return new Promise<boolean>((resolve) => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const newLocation: UserLocation = {
@@ -114,7 +114,7 @@ export function useLocation(): UseLocationReturn {
           }
 
           setLocation(newLocation);
-          resolve();
+          resolve(true);
         },
         (err) => {
           console.error('Geolocation error:', err);
@@ -124,7 +124,7 @@ export function useLocation(): UseLocationReturn {
               ? 'Location permission denied'
               : 'Failed to get your location'
           );
-          resolve();
+          resolve(false);
         },
         {
           enableHighAccuracy: false,

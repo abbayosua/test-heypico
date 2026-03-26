@@ -220,6 +220,10 @@ export function MapView({
 
     userMarkerRef.current = userMarker;
 
+    // Pan to user location when it changes
+    map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+    map.setZoom(13);
+
     return () => {
       userMarker.setMap(null);
       pulseCircle.setMap(null);

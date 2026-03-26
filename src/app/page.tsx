@@ -141,7 +141,7 @@ export default function Home() {
 
   // Handle location dialog allow
   const handleAllowLocation = useCallback(async () => {
-    await requestPermission();
+    return await requestPermission();
   }, [requestPermission]);
 
   // Show loading state until session is ready (prevents hydration mismatch)

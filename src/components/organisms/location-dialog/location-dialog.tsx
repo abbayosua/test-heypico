@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Navigation, Search, X, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import type { UserLocation, LocationStatus } from '@/hooks/use-location';
 
 interface CityPrediction {
@@ -21,7 +22,7 @@ interface LocationDialogProps {
   onOpenChange: (open: boolean) => void;
   status: LocationStatus;
   error: string | null;
-  onAllowLocation: () => Promise<void>;
+  onAllowLocation: () => Promise<boolean>;
   onSetLocation: (location: UserLocation) => void;
   onSetLocationFromCity: (city: string) => Promise<boolean>;
 }
@@ -41,6 +42,7 @@ export function LocationDialog({
   const [isSettingCity, setIsSettingCity] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { toast } = useToast();
 
   // Fetch city predictions
   useEffect(() => {
@@ -90,6 +92,19 @@ export function LocationDialog({
     };
   }, [cityInput]);
 
+  // Handle allow location button click
+  const handleAllowLocation = async () => {
+    const success = await onAllowLocation();
+    if (success) {
+      onOpenChange(false);
+      toast({
+        title: "Location Updated!",
+        description: "Your location has been set successfully.",
+        variant: "success",
+      });
+    }
+  };
+
   // Handle city selection
   const handleSelectCity = async (prediction: CityPrediction) => {
     setIsSettingCity(true);
@@ -101,6 +116,11 @@ export function LocationDialog({
 
     if (success) {
       onOpenChange(false);
+      toast({
+        title: "Location Updated!",
+        description: `Location set to ${prediction.mainText}.`,
+        variant: "success",
+      });
     }
   };
 
@@ -112,6 +132,11 @@ export function LocationDialog({
     setIsSettingCity(false);
     if (success) {
       onOpenChange(false);
+      toast({
+        title: "Location Updated!",
+        description: `Location set to ${cityInput}.`,
+        variant: "success",
+      });
     }
   };
 
@@ -134,7 +159,7 @@ export function LocationDialog({
           {/* Allow Location Button */}
           {status !== 'denied' && (
             <Button
-              onClick={onAllowLocation}
+              onClick={handleAllowLocation}
               disabled={isLoading}
               className="w-full"
               variant="default"
