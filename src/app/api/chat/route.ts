@@ -80,6 +80,11 @@ export async function POST(request: NextRequest) {
     const settings = conversation.settings;
     const llmProvider = settings?.llmProvider || 'llm7';
 
+    console.log('[Chat] Provider:', llmProvider);
+    console.log('[Chat] Settings llm7ApiKey exists:', !!settings?.llm7ApiKey);
+    console.log('[Chat] Env LLM7_API_KEY exists:', !!process.env.LLM7_API_KEY);
+    console.log('[Chat] Env LLM7_API_KEY length:', process.env.LLM7_API_KEY?.length);
+
     // Build conversation history
     const history = conversation.messages
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
