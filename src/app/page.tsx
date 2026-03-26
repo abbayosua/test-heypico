@@ -189,6 +189,8 @@ export default function Home() {
           isLoading={isLoading}
           onSendMessage={handleSendMessage}
           onPlaceClick={handlePlaceClick}
+          userLocation={userLocation}
+          onRequestLocation={() => setShowLocationDialog(true)}
         />
       </div>
 

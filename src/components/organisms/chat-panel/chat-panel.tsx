@@ -8,13 +8,15 @@ import { ChatMessage } from '@/components/molecules/chat-message';
 import { TypingIndicator } from '@/components/molecules/typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/atoms/skeleton';
-import type { ExtractedPlace, Message } from '@/types';
+import type { ExtractedPlace, Message, UserLocation } from '@/types';
 
 interface ChatPanelProps {
   messages: Message[];
   isLoading: boolean;
   onSendMessage: (message: string) => void;
   onPlaceClick?: (place: ExtractedPlace, groupId?: string) => void;
+  userLocation?: UserLocation | null;
+  onRequestLocation?: () => void;
   className?: string;
 }
 
@@ -23,10 +25,13 @@ export function ChatPanel({
   isLoading,
   onSendMessage,
   onPlaceClick,
+  userLocation,
+  onRequestLocation,
   className,
 }: ChatPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasLocation = Boolean(userLocation);
 
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
@@ -57,14 +62,17 @@ export function ChatPanel({
                   <ExamplePrompt
                     text="Best restaurants near me"
                     onClick={onSendMessage}
+                    disabled={!hasLocation}
                   />
                   <ExamplePrompt
                     text="Best coffee shops near me"
                     onClick={onSendMessage}
+                    disabled={!hasLocation}
                   />
                   <ExamplePrompt
                     text="Tourist attractions near me"
                     onClick={onSendMessage}
+                    disabled={!hasLocation}
                   />
                 </div>
               </div>
@@ -90,7 +98,12 @@ export function ChatPanel({
       </ScrollArea>
 
       {/* Input Area */}
-      <ChatInput onSend={onSendMessage} isLoading={isLoading} />
+      <ChatInput
+        onSend={onSendMessage}
+        isLoading={isLoading}
+        hasLocation={hasLocation}
+        onRequestLocation={onRequestLocation}
+      />
     </div>
   );
 }
@@ -99,14 +112,21 @@ export function ChatPanel({
 function ExamplePrompt({
   text,
   onClick,
+  disabled = false,
 }: {
   text: string;
   onClick: (message: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
-      onClick={() => onClick(text)}
-      className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-full transition-colors"
+      onClick={() => !disabled && onClick(text)}
+      disabled={disabled}
+      className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+        disabled
+          ? 'bg-muted/50 text-muted-foreground cursor-not-allowed'
+          : 'bg-muted hover:bg-muted/80'
+      }`}
     >
       {text}
     </button>
