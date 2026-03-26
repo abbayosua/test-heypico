@@ -28,7 +28,7 @@ export function DirectionsPanel({
   isLoading = false,
   onClose,
 }: DirectionsPanelProps) {
-  const [expandedRoute, setExpandedRoute] = useState(0);
+  const [expandedRoute, setExpandedRoute] = useState<number | null>(0);
 
   if (isLoading) {
     return (
@@ -71,7 +71,7 @@ export function DirectionsPanel({
             <Badge variant="outline" className="h-6 w-6 p-0 flex items-center justify-center rounded-full">
               B
             </Badge>
-            <span className="truncate">{destination}</span>
+            <span className="truncate">{destination || 'Destination'}</span>
           </div>
         </div>
       </CardHeader>
@@ -82,16 +82,16 @@ export function DirectionsPanel({
       <CardContent className="flex-1 overflow-y-auto p-0 min-h-0">
         <div className="divide-y">
           {routes.map((route, index) => (
-            <div key={index}>
+            <div key={`route-${index}`}>
               <button
                 className="w-full p-4 text-left hover:bg-muted/50 transition-colors"
-                onClick={() => setExpandedRoute(expandedRoute === index ? -1 : index)}
+                onClick={() => setExpandedRoute(expandedRoute === index ? null : index)}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{route.summary}</p>
+                    <p className="font-medium">{route.summary || 'Route'}</p>
                     <p className="text-sm text-muted-foreground">
-                      {route.distance} • {route.duration}
+                      {route.distance || ''} {route.duration ? `• ${route.duration}` : ''}
                     </p>
                   </div>
                   {expandedRoute === index ? (
@@ -103,18 +103,18 @@ export function DirectionsPanel({
               </button>
 
               {/* Steps */}
-              {expandedRoute === index && route.steps && (
+              {expandedRoute === index && route.steps && route.steps.length > 0 && (
                 <div className="px-4 pb-4">
                   <ol className="space-y-2">
                     {route.steps.map((step, stepIndex) => (
-                      <li key={stepIndex} className="flex gap-3 text-sm">
+                      <li key={`step-${index}-${stepIndex}`} className="flex gap-3 text-sm">
                         <span className="text-muted-foreground shrink-0">
                           {stepIndex + 1}.
                         </span>
                         <div>
-                          <p>{step.instructions}</p>
+                          <p>{step.instructions || ''}</p>
                           <p className="text-muted-foreground text-xs">
-                            {step.distance} • {step.duration}
+                            {step.distance || ''} {step.duration ? `• ${step.duration}` : ''}
                           </p>
                         </div>
                       </li>
