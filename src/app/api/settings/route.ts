@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { LLMProviderType } from '@/types';
 
-// Default provider - use gemini if Ollama is not available
-const DEFAULT_PROVIDER: LLMProviderType = 'gemini';
+// Default provider - use LLM7 as it's free and always available
+const DEFAULT_PROVIDER: LLMProviderType = 'llm7';
 
 // Get settings for a session
 export async function GET(request: NextRequest) {
@@ -28,12 +28,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!conversation?.settings) {
-      // Return default settings - use Gemini by default since Ollama is not always available
+      // Return default settings
       return NextResponse.json({
         llmProvider: DEFAULT_PROVIDER,
         ollamaModel: process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2',
         geminiModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite',
         geminiApiKey: null,
+        llm7Model: process.env.LLM7_DEFAULT_MODEL || 'default',
+        llm7ApiKey: null,
       });
     }
 
@@ -42,6 +44,8 @@ export async function GET(request: NextRequest) {
       ollamaModel: conversation.settings.ollamaModel,
       geminiModel: conversation.settings.geminiModel,
       geminiApiKey: conversation.settings.geminiApiKey ? '••••••••' : null, // Masked
+      llm7Model: conversation.settings.llm7Model,
+      llm7ApiKey: conversation.settings.llm7ApiKey ? '••••••••' : null, // Masked
     });
   } catch (error) {
     console.error('Settings GET error:', error);
@@ -56,7 +60,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, llmProvider, ollamaModel, geminiModel, geminiApiKey } = body;
+    const { sessionId, llmProvider, ollamaModel, geminiModel, geminiApiKey, llm7Model, llm7ApiKey } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -84,6 +88,8 @@ export async function PUT(request: NextRequest) {
               ollamaModel,
               geminiModel,
               geminiApiKey,
+              llm7Model,
+              llm7ApiKey,
             },
           },
         },
@@ -98,6 +104,8 @@ export async function PUT(request: NextRequest) {
           ollamaModel,
           geminiModel,
           geminiApiKey: geminiApiKey || conversation.settings.geminiApiKey,
+          llm7Model,
+          llm7ApiKey: llm7ApiKey || conversation.settings.llm7ApiKey,
         },
       });
     } else {
@@ -110,6 +118,8 @@ export async function PUT(request: NextRequest) {
           ollamaModel,
           geminiModel,
           geminiApiKey,
+          llm7Model,
+          llm7ApiKey,
         },
       });
     }

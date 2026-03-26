@@ -5,6 +5,7 @@ import type { LLMModel } from '@/types';
 export const LLM_PROVIDERS = {
   OLLAMA: 'ollama',
   GEMINI: 'gemini',
+  LLM7: 'llm7',
 } as const;
 
 export const DEFAULT_OLLAMA_MODELS: LLMModel[] = [
@@ -22,6 +23,12 @@ export const DEFAULT_GEMINI_MODELS: LLMModel[] = [
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini' },
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini' },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },
+];
+
+export const DEFAULT_LLM7_MODELS: LLMModel[] = [
+  { id: 'default', name: 'Default (Balanced)', provider: 'llm7' },
+  { id: 'fast', name: 'Fast (Quick Responses)', provider: 'llm7' },
+  { id: 'pro', name: 'Pro (Advanced)', provider: 'llm7' },
 ];
 
 export const SYSTEM_PROMPT = `You are an AI Location Assistant specialized in helping users find places to visit, eat, explore, and discover.

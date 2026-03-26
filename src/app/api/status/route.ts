@@ -19,6 +19,11 @@ export async function GET() {
           hasApiKey: llmStatus.gemini.hasApiKey,
           models: llmStatus.gemini.models.length,
         },
+        llm7: {
+          available: llmStatus.llm7.available,
+          hasApiKey: llmStatus.llm7.hasApiKey,
+          models: llmStatus.llm7.models.length,
+        },
       },
       maps: {
         hasApiKey: hasApiKey(),

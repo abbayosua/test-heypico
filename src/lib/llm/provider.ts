@@ -3,25 +3,15 @@
 import type { ILLMProvider } from './types';
 import { OllamaProvider, getOllamaProvider } from './ollama';
 import { GeminiProvider, getGeminiProvider, resetGeminiProvider } from './gemini';
-import type { LLMProviderType, LLMModel } from '@/types';
-import { DEFAULT_OLLAMA_MODELS, DEFAULT_GEMINI_MODELS, FALLBACK_RESPONSE } from '@/constants';
-
-export interface ProviderStatus {
-  ollama: {
-    available: boolean;
-    models: LLMModel[];
-  };
-  gemini: {
-    available: boolean;
-    models: LLMModel[];
-    hasApiKey: boolean;
-  };
-}
+import { LLM7Provider, getLLM7Provider, resetLLM7Provider } from './llm7';
+import type { LLMProviderType, LLMModel, ProviderStatus } from '@/types';
+import { DEFAULT_OLLAMA_MODELS, DEFAULT_GEMINI_MODELS, DEFAULT_LLM7_MODELS, FALLBACK_RESPONSE } from '@/constants';
 
 // Get provider status
 export async function getProviderStatus(
   ollamaBaseUrl?: string,
-  geminiApiKey?: string
+  geminiApiKey?: string,
+  llm7ApiKey?: string
 ): Promise<ProviderStatus> {
   const ollamaProvider = getOllamaProvider(ollamaBaseUrl);
   const [ollamaAvailable, ollamaModels] = await Promise.all([
@@ -32,6 +22,9 @@ export async function getProviderStatus(
   const geminiProvider = getGeminiProvider(geminiApiKey);
   const geminiAvailable = geminiProvider ? await geminiProvider.isAvailable() : false;
 
+  const llm7Provider = getLLM7Provider(llm7ApiKey);
+  const llm7Available = llm7Provider ? await llm7Provider.isAvailable() : false;
+
   return {
     ollama: {
       available: ollamaAvailable,
@@ -41,6 +34,11 @@ export async function getProviderStatus(
       available: geminiAvailable,
       models: DEFAULT_GEMINI_MODELS,
       hasApiKey: !!geminiApiKey || !!process.env.GEMINI_API_KEY,
+    },
+    llm7: {
+      available: llm7Available,
+      models: DEFAULT_LLM7_MODELS,
+      hasApiKey: !!llm7ApiKey || !!process.env.LLM7_API_KEY,
     },
   };
 }
@@ -53,6 +51,8 @@ export function getProvider(
     ollamaModel?: string;
     geminiApiKey?: string;
     geminiModel?: string;
+    llm7ApiKey?: string;
+    llm7Model?: string;
   }
 ): ILLMProvider | null {
   if (providerType === 'gemini') {
@@ -60,17 +60,45 @@ export function getProvider(
     if (!apiKey) {
       return null;
     }
-    // Reset instance if API key changed
     if (config?.geminiApiKey) {
       resetGeminiProvider();
     }
     return getGeminiProvider(apiKey, config?.geminiModel);
   }
 
+  if (providerType === 'llm7') {
+    const apiKey = config?.llm7ApiKey || process.env.LLM7_API_KEY;
+    if (!apiKey) {
+      return null;
+    }
+    if (config?.llm7ApiKey) {
+      resetLLM7Provider();
+    }
+    return getLLM7Provider(apiKey, config?.llm7Model);
+  }
+
   return getOllamaProvider(config?.ollamaBaseUrl, config?.ollamaModel);
 }
 
-// Chat with fallback
+// Get default model for a provider
+function getDefaultModel(provider: LLMProviderType, config?: {
+  ollamaModel?: string;
+  geminiModel?: string;
+  llm7Model?: string;
+}): string {
+  switch (provider) {
+    case 'ollama':
+      return config?.ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2';
+    case 'gemini':
+      return config?.geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite';
+    case 'llm7':
+      return config?.llm7Model || process.env.LLM7_DEFAULT_MODEL || 'default';
+    default:
+      return 'default';
+  }
+}
+
+// Chat with fallback (tries multiple providers)
 export async function chatWithFallback(
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
   config: {
@@ -79,81 +107,46 @@ export async function chatWithFallback(
     ollamaModel?: string;
     geminiApiKey?: string;
     geminiModel?: string;
+    llm7ApiKey?: string;
+    llm7Model?: string;
   }
 ): Promise<{ response: string; provider: LLMProviderType; model: string }> {
-  const { preferredProvider, ollamaBaseUrl, ollamaModel, geminiApiKey, geminiModel } = config;
+  const { preferredProvider } = config;
 
-  // Try preferred provider first
-  const provider = getProvider(preferredProvider, {
-    ollamaBaseUrl,
-    ollamaModel,
-    geminiApiKey,
-    geminiModel,
-  });
+  // Order of providers to try
+  const providerOrder: LLMProviderType[] = [preferredProvider];
+  
+  // Add other providers as fallbacks
+  const allProviders: LLMProviderType[] = ['llm7', 'gemini', 'ollama'];
+  for (const p of allProviders) {
+    if (!providerOrder.includes(p)) {
+      providerOrder.push(p);
+    }
+  }
 
-  if (provider) {
-    const isAvailable = await provider.isAvailable();
-    if (isAvailable) {
+  // Try each provider in order
+  for (const providerType of providerOrder) {
+    const provider = getProvider(providerType, config);
+    
+    if (provider) {
       try {
-        const model = preferredProvider === 'ollama' 
-          ? (ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2')
-          : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite');
-        
-        // Use the appropriate method based on provider type
-        if (preferredProvider === 'ollama') {
-          const ollamaProv = provider as OllamaProvider;
-          const response = await ollamaProv.chatWithModel(model, messages);
-          return { response, provider: preferredProvider, model };
-        } else {
-          const geminiProv = provider as GeminiProvider;
-          const response = await geminiProv.chatWithModel(model, messages);
-          return { response, provider: preferredProvider, model };
+        const isAvailable = await provider.isAvailable();
+        if (isAvailable) {
+          const model = getDefaultModel(providerType, config);
+          const response = await provider.chatWithModel(model, messages);
+          return { response, provider: providerType, model };
         }
       } catch (error) {
-        console.error(`${preferredProvider} chat failed:`, error);
+        console.error(`${providerType} chat failed:`, error);
       }
     }
   }
 
-  // Try fallback provider
-  const fallbackProvider = preferredProvider === 'ollama' ? 'gemini' : 'ollama';
-  const fallbackProv = getProvider(fallbackProvider, {
-    ollamaBaseUrl,
-    ollamaModel,
-    geminiApiKey,
-    geminiModel,
-  });
-
-  if (fallbackProv) {
-    const isAvailable = await fallbackProv.isAvailable();
-    if (isAvailable) {
-      try {
-        const model = fallbackProvider === 'ollama'
-          ? (ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2')
-          : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite');
-
-        if (fallbackProvider === 'ollama') {
-          const ollamaProv = fallbackProv as OllamaProvider;
-          const response = await ollamaProv.chatWithModel(model, messages);
-          return { response, provider: fallbackProvider, model };
-        } else {
-          const geminiProv = fallbackProv as GeminiProvider;
-          const response = await geminiProv.chatWithModel(model, messages);
-          return { response, provider: fallbackProvider, model };
-        }
-      } catch (error) {
-        console.error(`${fallbackProvider} chat failed:`, error);
-      }
-    }
-  }
-
-  // Both providers failed
+  // All providers failed
   return {
     response: FALLBACK_RESPONSE,
     provider: preferredProvider,
-    model: preferredProvider === 'ollama' 
-      ? (ollamaModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2')
-      : (geminiModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash-lite'),
+    model: getDefaultModel(preferredProvider, config),
   };
 }
 
@@ -168,8 +161,13 @@ export async function getAvailableModels(
     return models.length > 0 ? models : DEFAULT_OLLAMA_MODELS;
   }
 
+  if (provider === 'llm7') {
+    return DEFAULT_LLM7_MODELS;
+  }
+
   return DEFAULT_GEMINI_MODELS;
 }
 
 export { OllamaProvider } from './ollama';
 export { GeminiProvider } from './gemini';
+export { LLM7Provider } from './llm7';

@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
           settings: {
             create: {
               sessionId,
-              llmProvider: 'gemini', // Default to Gemini since Ollama may not be available
+              llmProvider: 'llm7', // Default to LLM7 (free and always available)
             },
           },
         },
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Get settings
     const settings = conversation.settings;
-    const llmProvider = settings?.llmProvider || 'gemini';
+    const llmProvider = settings?.llmProvider || 'llm7';
 
     // Build conversation history
     const history = conversation.messages
@@ -97,6 +97,8 @@ export async function POST(request: NextRequest) {
       ollamaModel: settings?.ollamaModel || undefined,
       geminiApiKey: settings?.geminiApiKey || undefined,
       geminiModel: settings?.geminiModel || undefined,
+      llm7ApiKey: settings?.llm7ApiKey || undefined,
+      llm7Model: settings?.llm7Model || undefined,
     });
 
     // Extract places from the response

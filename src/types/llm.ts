@@ -6,7 +6,7 @@ export interface ChatMessage {
   content: string;
 }
 
-export type LLMProviderType = 'ollama' | 'gemini';
+export type LLMProviderType = 'ollama' | 'gemini' | 'llm7';
 
 export interface LLMModel {
   id: string;
@@ -38,6 +38,11 @@ export interface ProviderStatus {
     models: LLMModel[];
   };
   gemini: {
+    available: boolean;
+    hasApiKey: boolean;
+    models: LLMModel[];
+  };
+  llm7: {
     available: boolean;
     hasApiKey: boolean;
     models: LLMModel[];
