@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 
 export interface UserLocation {
   lat: number;
@@ -11,12 +11,12 @@ export interface UserLocation {
   country?: string;
 }
 
-export type LocationStatus = 
-  | 'idle' 
-  | 'prompt' 
-  | 'loading' 
-  | 'granted' 
-  | 'denied' 
+export type LocationStatus =
+  | 'idle'
+  | 'prompt'
+  | 'loading'
+  | 'granted'
+  | 'denied'
   | 'error';
 
 export interface UseLocationReturn {
@@ -31,36 +31,89 @@ export interface UseLocationReturn {
 // Storage key for persisting location
 const LOCATION_STORAGE_KEY = 'map-assistant-user-location';
 
-export function useLocation(): UseLocationReturn {
-  const [location, setLocationState] = useState<UserLocation | null>(null);
-  const [status, setStatus] = useState<LocationStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
+// In-memory location state for client-side updates
+let locationState: UserLocation | null = null;
+let statusState: LocationStatus = 'prompt';
+const listeners = new Set<() => void>();
 
-  // Load saved location on mount
-  useEffect(() => {
+// Subscribe to location changes
+function subscribe(callback: () => void) {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
+}
+
+// Get current location snapshot (client)
+function getLocationSnapshot(): UserLocation | null {
+  return locationState;
+}
+
+// Get current status snapshot (client)
+function getStatusSnapshot(): LocationStatus {
+  return statusState;
+}
+
+// Get server snapshot (always returns null/idle for SSR)
+function getServerLocationSnapshot(): UserLocation | null {
+  return null;
+}
+
+function getServerStatusSnapshot(): LocationStatus {
+  return 'prompt';
+}
+
+// Notify all listeners of state change
+function notifyListeners() {
+  listeners.forEach((callback) => callback());
+}
+
+// Initialize from localStorage (runs once on client)
+function initializeFromStorage() {
+  if (typeof window === 'undefined') return;
+
+  try {
     const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
     if (savedLocation) {
-      try {
-        const parsed = JSON.parse(savedLocation) as UserLocation;
-        setLocationState(parsed);
-        setStatus('granted');
-      } catch {
-        // Invalid saved location, ignore
-        localStorage.removeItem(LOCATION_STORAGE_KEY);
-      }
+      const parsed = JSON.parse(savedLocation) as UserLocation;
+      locationState = parsed;
+      statusState = 'granted';
     } else {
-      // Check if we should prompt for location
-      if (navigator.geolocation) {
-        setStatus('prompt');
-      } else {
-        setStatus('error');
-        setError('Geolocation is not supported by your browser');
-      }
+      statusState = navigator.geolocation ? 'prompt' : 'error';
     }
-  }, []);
+  } catch {
+    localStorage.removeItem(LOCATION_STORAGE_KEY);
+    statusState = navigator.geolocation ? 'prompt' : 'error';
+  }
+  notifyListeners();
+}
+
+// Run initialization once
+let initialized = false;
+
+export function useLocation(): UseLocationReturn {
+  // Use useSyncExternalStore to prevent hydration mismatch
+  const location = useSyncExternalStore(
+    subscribe,
+    getLocationSnapshot,
+    getServerLocationSnapshot
+  );
+
+  const status = useSyncExternalStore(
+    subscribe,
+    getStatusSnapshot,
+    getServerStatusSnapshot
+  );
+
+  // Initialize from localStorage once on client
+  if (!initialized && typeof window !== 'undefined') {
+    initialized = true;
+    initializeFromStorage();
+  }
+
+  const [error, setError] = useState<string | null>(null);
 
   // Save location to localStorage
   const saveLocation = useCallback((loc: UserLocation | null) => {
+    if (typeof window === 'undefined') return;
     if (loc) {
       localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
     } else {
@@ -70,22 +123,23 @@ export function useLocation(): UseLocationReturn {
 
   // Set location and persist
   const setLocation = useCallback((loc: UserLocation | null) => {
-    setLocationState(loc);
+    locationState = loc;
+    statusState = loc ? 'granted' : 'prompt';
     saveLocation(loc);
-    if (loc) {
-      setStatus('granted');
-    }
+    notifyListeners();
   }, [saveLocation]);
 
   // Request geolocation permission
   const requestPermission = useCallback(async () => {
-    if (!navigator.geolocation) {
-      setStatus('error');
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      statusState = 'error';
+      notifyListeners();
       setError('Geolocation is not supported by your browser');
       return false;
     }
 
-    setStatus('loading');
+    statusState = 'loading';
+    notifyListeners();
     setError(null);
 
     return new Promise<boolean>((resolve) => {
@@ -118,7 +172,8 @@ export function useLocation(): UseLocationReturn {
         },
         (err) => {
           console.error('Geolocation error:', err);
-          setStatus('denied');
+          statusState = 'denied';
+          notifyListeners();
           setError(
             err.code === err.PERMISSION_DENIED
               ? 'Location permission denied'
@@ -139,7 +194,8 @@ export function useLocation(): UseLocationReturn {
   const setLocationFromCity = useCallback(async (city: string): Promise<boolean> => {
     if (!city.trim()) return false;
 
-    setStatus('loading');
+    statusState = 'loading';
+    notifyListeners();
     setError(null);
 
     try {
@@ -159,13 +215,15 @@ export function useLocation(): UseLocationReturn {
         setLocation(newLocation);
         return true;
       } else {
-        setStatus('error');
+        statusState = 'error';
+        notifyListeners();
         setError('City not found');
         return false;
       }
     } catch (err) {
       console.error('Geocoding error:', err);
-      setStatus('error');
+      statusState = 'error';
+      notifyListeners();
       setError('Failed to find city');
       return false;
     }
