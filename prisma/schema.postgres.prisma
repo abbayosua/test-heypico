@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // For Neon connection pooling
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ============ CONVERSATION & MESSAGES ============
@@ -47,10 +46,12 @@ model SessionSettings {
   sessionId      String       @unique
   conversationId String       @unique
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  llmProvider    String       @default("ollama") // "ollama" | "gemini"
+  llmProvider    String       @default("llm7") // "ollama" | "gemini" | "llm7"
   ollamaModel    String?
   geminiModel    String?
   geminiApiKey   String?      @db.Text // User's Gemini API key (optional)
+  llm7Model      String?
+  llm7ApiKey     String?      @db.Text // User's LLM7 API key (optional)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -78,7 +79,7 @@ model SearchCache {
 model ApiUsageLog {
   id        String   @id @default(cuid())
   apiType   String   // "places" | "geocode" | "directions" | "llm"
-  provider  String?  // "ollama" | "gemini" | "google"
+  provider  String?  // "ollama" | "gemini" | "llm7" | "google"
   sessionId String?
   costUnits Int      @default(1)
   createdAt DateTime @default(now())

@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=512' next dev -p 3000 2>&1 | tee dev.log",
     "build": "prisma generate && next build",
+    "vercel-build": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma generate && prisma db push --accept-data-loss && next build",
     "start": "next start",
     "lint": "eslint .",
     "db:push": "prisma db push",
+    "db:push:prod": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
