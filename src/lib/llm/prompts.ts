@@ -1,6 +1,7 @@
 // LLM Prompts for Location Assistant
 
 import { SYSTEM_PROMPT } from '@/constants';
+import type { ExtractedPlace } from '@/types';
 
 export const getSystemPrompt = (): string => {
   return SYSTEM_PROMPT;
@@ -28,12 +29,55 @@ If no specific places are mentioned, return an empty array: []
 
 Important: Return ONLY the JSON array, no other text.`;
 
+interface PlaceWithDetails extends ExtractedPlace {
+  location?: { lat: number; lng: number };
+  placeId?: string;
+  rating?: number;
+  googleMapsUrl?: string;
+}
+
 export function buildChatMessages(
   userMessage: string,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  places?: PlaceWithDetails[],
+  userLocation?: { lat: number; lng: number; city?: string }
 ): Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
+  // Build enhanced system prompt with context
+  let enhancedSystemPrompt = SYSTEM_PROMPT;
+
+  // Add places context if available
+  if (places && places.length > 0) {
+    const placesContext = `
+
+IMPORTANT CONTEXT - Google Maps Search Results:
+I have already searched Google Maps for the user's query and found these places. Present these results naturally in your response:
+
+${places.map((p, i) => `${i + 1}. **${p.name}**
+   - Address: ${p.address || 'Address not available'}
+   - Rating: ${p.rating ? `${p.rating}/5` : 'Not rated'}
+   - Type: ${p.type || 'Place'}`).join('\n')}
+
+Your task is to:
+1. Acknowledge the user's request warmly
+2. Present these places in a natural, conversational way
+3. Mention the ratings if available
+4. Keep your response concise and helpful
+5. Do NOT ask for location - we already searched near the user's location`;
+    
+    enhancedSystemPrompt += placesContext;
+  } else if (userLocation) {
+    // Add location context when no places found
+    const locationContext = `
+
+IMPORTANT CONTEXT:
+The user's location has been detected. They are near coordinates: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}${userLocation.city ? ` (in ${userLocation.city})` : ''}.
+Use this context when helping them find places.`;
+    
+    enhancedSystemPrompt += locationContext;
+  }
+
   const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
-    { role: 'system', content: getSystemPrompt() },
+    { role: 'system', content: enhancedSystemPrompt },
   ];
 
   // Add conversation history

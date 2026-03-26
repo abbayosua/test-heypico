@@ -98,25 +98,10 @@ export async function POST(request: NextRequest) {
         content: m.content,
       }));
 
-    // Build messages for LLM
-    const messages = buildChatMessages(message, history);
-
-    // Get LLM response
-    const result = await chatWithFallback(messages, {
-      preferredProvider: llmProvider,
-      ollamaModel: settings?.ollamaModel || undefined,
-      geminiApiKey: settings?.geminiApiKey || undefined,
-      geminiModel: settings?.geminiModel || undefined,
-      llm7ApiKey: settings?.llm7ApiKey || undefined,
-      llm7Model: settings?.llm7Model || undefined,
-    });
-
-    // Extract places from the response
+    // Check if the query is about finding places FIRST
     let places: PlaceResult[] = [];
-
-    // Check if the query is about finding places
     const lowerMessage = message.toLowerCase();
-    const isPlaceQuery = 
+    const isPlaceQuery =
       // Location/search patterns
       lowerMessage.includes('near me') ||
       lowerMessage.includes('nearby') ||
@@ -169,6 +154,7 @@ export async function POST(request: NextRequest) {
       lowerMessage.includes('great') ||
       lowerMessage.includes('popular');
 
+    // Search for places BEFORE calling the LLM
     if (isPlaceQuery) {
       try {
         // Build search params with optional location
@@ -207,6 +193,19 @@ export async function POST(request: NextRequest) {
         console.error('Places search error:', error);
       }
     }
+
+    // Build messages for LLM with places context
+    const messages = buildChatMessages(message, history, places, userLocation);
+
+    // Get LLM response
+    const result = await chatWithFallback(messages, {
+      preferredProvider: llmProvider,
+      ollamaModel: settings?.ollamaModel || undefined,
+      geminiApiKey: settings?.geminiApiKey || undefined,
+      geminiModel: settings?.geminiModel || undefined,
+      llm7ApiKey: settings?.llm7ApiKey || undefined,
+      llm7Model: settings?.llm7Model || undefined,
+    });
 
     // Save user message
     await db.message.create({
