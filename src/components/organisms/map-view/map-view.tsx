@@ -369,7 +369,7 @@ export function MapView({
   }
 
   return (
-    <div className={`relative w-full h-full ${className || ''}`}>
+    <div className={`absolute inset-0 w-full h-full ${className || ''}`}>
       <div ref={mapRef} className="absolute inset-0 w-full h-full" />
       {isLoading && (
         <div className="absolute inset-0 pointer-events-none">

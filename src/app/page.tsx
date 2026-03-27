@@ -169,7 +169,7 @@ export default function Home() {
       onRequestLocation={() => setShowLocationDialog(true)}
     >
       {/* Chat Panel - Left Side */}
-      <div className="w-full md:w-[400px] lg:w-[450px] h-[50vh] md:h-[calc(100vh-112px)] border-r flex flex-col">
+      <div className="w-full md:w-[400px] lg:w-[450px] h-[40vh] md:h-[calc(100vh-112px)] border-r flex flex-col">
         <ChatPanel
           messages={messages}
           isLoading={isLoading}
@@ -181,9 +181,9 @@ export default function Home() {
       </div>
 
       {/* Map & Directions - Right Side */}
-      <div className="flex-1 flex flex-col md:flex-row h-[50vh] md:h-[calc(100vh-112px)]">
+      <div className="flex-1 flex flex-col md:flex-row h-[40vh] md:h-[calc(100vh-112px)] min-h-[200px]">
         {/* Map View */}
-        <div className="flex-1 relative h-full min-h-0">
+        <div className="flex-1 relative min-h-0">
           <MapView
             places={mapPlaces}
             selectedPlace={selectedPlace}
