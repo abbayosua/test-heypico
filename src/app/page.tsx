@@ -193,9 +193,9 @@ export default function Home() {
           />
         </div>
 
-        {/* Directions Panel */}
+        {/* Directions Panel - Desktop only, mobile uses bottom sheet */}
         {showDirections && directions && (
-          <div className="absolute md:relative top-0 right-0 w-full md:w-80 h-full z-10 p-4 md:p-0 flex flex-col">
+          <div className="hidden md:block w-80 h-full">
             <DirectionsPanel
               origin={directionsOrigin || undefined}
               destination={directionsDestination || undefined}
@@ -210,6 +210,23 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Directions Panel - Mobile bottom sheet (rendered outside map container) */}
+      {showDirections && directions && (
+        <div className="md:hidden">
+          <DirectionsPanel
+            origin={directionsOrigin || undefined}
+            destination={directionsDestination || undefined}
+            routes={directions}
+            googleMapsUrl={googleMapsUrl || undefined}
+            isLoading={directionsLoading}
+            onClose={() => {
+              setShowDirections(false);
+              clearDirections();
+            }}
+          />
+        </div>
+      )}
 
       {/* Place Details Dialog */}
       <PlaceDetailsDialog
