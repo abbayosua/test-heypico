@@ -1,5 +1,5 @@
 // Prisma Schema for AI Map Assistant
-// SQLite for local development - Use schema.postgres.prisma for Vercel/Neon
+// PostgreSQL (Neon)
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:/home/z/my-project/db/custom.db"
 }
 
 // ============ CONVERSATION & MESSAGES ============

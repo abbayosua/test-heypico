@@ -52,15 +52,6 @@ export interface PlaceSearchResult {
   };
 }
 
-// Place Group for managing multiple search results
-export interface PlaceGroup {
-  id: string;
-  query: string;
-  places: (Place | ExtractedPlace)[];
-  color: string;
-  createdAt: Date;
-}
-
 // Extended ExtractedPlace with optional fields from Place
 export interface ExtractedPlace {
   name: string;

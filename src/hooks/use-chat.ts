@@ -17,11 +17,6 @@ interface UseChatOptions {
   userLocation?: UserLocation | null;
 }
 
-interface PlaceGroupInfo {
-  groupId: string;
-  query: string;
-}
-
 interface UseChatReturn {
   messages: Message[];
   places: ExtractedPlace[];
@@ -30,8 +25,7 @@ interface UseChatReturn {
   provider: string | null;
   model: string | null;
   conversationId: string | null;
-  lastPlaceGroup: PlaceGroupInfo | null;
-  sendMessage: (message: string) => Promise<PlaceGroupInfo | null>;
+  sendMessage: (message: string) => Promise<void>;
   clearChat: () => void;
   setMessages: (messages: Message[]) => void;
 }
@@ -44,10 +38,9 @@ export function useChat({ sessionId, conversationId: initialConversationId, user
   const [provider, setProvider] = useState<string | null>(null);
   const [model, setModel] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId || null);
-  const [lastPlaceGroup, setLastPlaceGroup] = useState<PlaceGroupInfo | null>(null);
 
-  const sendMessage = useCallback(async (message: string): Promise<PlaceGroupInfo | null> => {
-    if (!message.trim() || isLoading) return null;
+  const sendMessage = useCallback(async (message: string): Promise<void> => {
+    if (!message.trim() || isLoading) return;
 
     setIsLoading(true);
     setError(null);
@@ -94,14 +87,13 @@ export function useChat({ sessionId, conversationId: initialConversationId, user
         createdAt: new Date(),
       };
 
-      // Add assistant message with place group reference
+      // Add assistant message
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         conversationId: data.conversationId,
         role: 'assistant',
         content: data.response,
         placesData: data.places.length > 0 ? data.places : null,
-        placeGroupId: data.placeGroupId,
         createdAt: new Date(),
       };
 
@@ -110,20 +102,10 @@ export function useChat({ sessionId, conversationId: initialConversationId, user
       setProvider(data.provider);
       setModel(data.model);
       setConversationId(data.conversationId);
-
-      // Return place group info for the map
-      const groupInfo: PlaceGroupInfo = {
-        groupId: data.placeGroupId,
-        query: data.query,
-      };
-      setLastPlaceGroup(groupInfo);
-
-      return groupInfo;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
       // Remove temp message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id));
-      return null;
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +116,6 @@ export function useChat({ sessionId, conversationId: initialConversationId, user
     setPlaces([]);
     setError(null);
     setConversationId(null);
-    setLastPlaceGroup(null);
   }, []);
 
   return {
@@ -145,7 +126,6 @@ export function useChat({ sessionId, conversationId: initialConversationId, user
     provider,
     model,
     conversationId,
-    lastPlaceGroup,
     sendMessage,
     clearChat,
     setMessages,

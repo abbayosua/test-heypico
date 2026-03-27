@@ -13,15 +13,13 @@ interface ChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
   places?: ExtractedPlace[];
-  placeGroupId?: string;
-  onPlaceClick?: (place: ExtractedPlace, groupId?: string) => void;
+  onPlaceClick?: (place: ExtractedPlace) => void;
 }
 
 export function ChatMessage({
   role,
   content,
   places,
-  placeGroupId,
   onPlaceClick,
 }: ChatMessageProps) {
   const isUser = role === 'user';
@@ -62,7 +60,6 @@ export function ChatMessage({
             ) : (
               <ReactMarkdown
                 components={{
-                  // Style markdown elements
                   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                   ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
@@ -82,7 +79,7 @@ export function ChatMessage({
             {places.map((place, index) => (
               <button
                 key={index}
-                onClick={() => onPlaceClick?.(place, placeGroupId)}
+                onClick={() => onPlaceClick?.(place)}
                 className="flex items-center gap-2 px-3 py-2 bg-background border rounded-lg text-xs hover:bg-accent transition-colors text-left"
               >
                 <span className="font-medium">{place.name}</span>

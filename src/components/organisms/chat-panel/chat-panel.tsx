@@ -7,15 +7,13 @@ import { ChatInput } from '@/components/molecules/chat-input';
 import { ChatMessage } from '@/components/molecules/chat-message';
 import { TypingIndicator } from '@/components/molecules/typing-indicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/atoms/skeleton';
-import { useMounted } from '@/hooks';
 import type { ExtractedPlace, Message, UserLocation } from '@/types';
 
 interface ChatPanelProps {
   messages: Message[];
   isLoading: boolean;
   onSendMessage: (message: string) => void;
-  onPlaceClick?: (place: ExtractedPlace, groupId?: string) => void;
+  onPlaceClick?: (place: ExtractedPlace) => void;
   userLocation?: UserLocation | null;
   onRequestLocation?: () => void;
   className?: string;
@@ -32,8 +30,6 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // Track if component is mounted to prevent hydration mismatch
-  const mounted = useMounted();
   const hasLocation = Boolean(userLocation);
 
   // Scroll to bottom function
@@ -47,10 +43,6 @@ export function ChatPanel({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading, scrollToBottom]);
-
-  // Only disable example buttons if mounted and no location
-  // This prevents hydration mismatch
-  const disableExamples = mounted && !hasLocation;
 
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
@@ -69,17 +61,17 @@ export function ChatPanel({
                   <ExamplePrompt
                     text="Best restaurants near me"
                     onClick={onSendMessage}
-                    disabled={disableExamples}
+                    disabled={!hasLocation}
                   />
                   <ExamplePrompt
                     text="Best coffee shops near me"
                     onClick={onSendMessage}
-                    disabled={disableExamples}
+                    disabled={!hasLocation}
                   />
                   <ExamplePrompt
                     text="Tourist attractions near me"
                     onClick={onSendMessage}
-                    disabled={disableExamples}
+                    disabled={!hasLocation}
                   />
                 </div>
               </div>
@@ -92,7 +84,6 @@ export function ChatPanel({
                   role={message.role}
                   content={message.content}
                   places={message.placesData || undefined}
-                  placeGroupId={message.placeGroupId}
                   onPlaceClick={onPlaceClick}
                 />
               ))}

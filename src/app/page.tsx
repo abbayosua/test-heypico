@@ -13,7 +13,6 @@ import { useChat } from '@/hooks/use-chat';
 import { useMap } from '@/hooks/use-map';
 import { useSettings } from '@/hooks/use-settings';
 import { useLocation } from '@/hooks/use-location';
-import { useMounted } from '@/hooks';
 import type { ExtractedPlace, Place } from '@/types';
 
 // Generate a session ID
@@ -56,9 +55,6 @@ export default function Home() {
     setLocationFromCity,
   } = useLocation();
 
-  // Track if mounted on client
-  const mounted = useMounted();
-
   // Show location dialog if no location is set
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [hasPromptedLocation, setHasPromptedLocation] = useState(false);
@@ -70,16 +66,12 @@ export default function Home() {
     isLoading,
     provider,
     model,
-    lastPlaceGroup,
     sendMessage,
   } = useChat({ sessionId, userLocation });
 
   const {
     places: mapPlaces,
-    placeGroups,
-    activeGroupId,
-    addPlaceGroup,
-    setActiveGroup,
+    addPlaces,
     selectedPlace,
     setSelectedPlace,
     directions,
@@ -96,19 +88,18 @@ export default function Home() {
 
   // Show location dialog on first load if no location
   useEffect(() => {
-    if (!mounted) return;
     if (!hasPromptedLocation && locationStatus === 'prompt') {
       setShowLocationDialog(true);
       setHasPromptedLocation(true);
     }
-  }, [mounted, locationStatus, hasPromptedLocation]);
+  }, [locationStatus, hasPromptedLocation]);
 
   // Add places to map when chat returns new places
   useEffect(() => {
-    if (lastPlaceGroup && chatPlaces.length > 0) {
-      addPlaceGroup(lastPlaceGroup.query, chatPlaces);
+    if (chatPlaces.length > 0) {
+      addPlaces(chatPlaces);
     }
-  }, [lastPlaceGroup, chatPlaces, addPlaceGroup]);
+  }, [chatPlaces, addPlaces]);
 
   // Selected place for details dialog
   const [detailsPlace, setDetailsPlace] = useState<Place | null>(null);
@@ -117,19 +108,15 @@ export default function Home() {
   // Directions panel state
   const [showDirections, setShowDirections] = useState(false);
 
-  // Handle place click - with optional group activation
-  const handlePlaceClick = useCallback((place: ExtractedPlace | Place, groupId?: string) => {
+  // Handle place click
+  const handlePlaceClick = useCallback((place: ExtractedPlace | Place) => {
     setSelectedPlace(place);
-
-    if (groupId) {
-      setActiveGroup(groupId);
-    }
 
     if ('placeId' in place && place.placeId) {
       setDetailsPlace(place as Place);
       setShowDetails(true);
     }
-  }, [setSelectedPlace, setActiveGroup]);
+  }, [setSelectedPlace]);
 
   // Handle directions click
   const handleDirectionsClick = useCallback(async (place: ExtractedPlace | Place) => {
@@ -199,8 +186,6 @@ export default function Home() {
         <div className="flex-1 relative h-full min-h-0">
           <MapView
             places={mapPlaces}
-            placeGroups={placeGroups}
-            activeGroupId={activeGroupId}
             selectedPlace={selectedPlace}
             onPlaceSelect={handlePlaceClick}
             userLocation={userLocation}

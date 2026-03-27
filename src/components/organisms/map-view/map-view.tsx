@@ -1,11 +1,11 @@
-// Map View Organism - Google Maps embedded view
+// Map View Organism - Google Maps embedded view (simplified - no grouping)
 
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { MapPin } from '@/components/atoms/icon';
 import { Skeleton } from '@/components/atoms/skeleton';
-import type { ExtractedPlace, Place, PlaceGroup } from '@/types';
+import type { ExtractedPlace, Place } from '@/types';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '@/constants';
 
 interface UserLocation {
@@ -16,8 +16,6 @@ interface UserLocation {
 
 interface MapViewProps {
   places?: (ExtractedPlace | Place)[];
-  placeGroups?: PlaceGroup[];
-  activeGroupId?: string | null;
   selectedPlace?: ExtractedPlace | Place | null;
   onPlaceSelect?: (place: ExtractedPlace | Place) => void;
   userLocation?: UserLocation | null;
@@ -29,8 +27,10 @@ interface MapMarker {
   place: ExtractedPlace | Place;
   marker: google.maps.Marker;
   infoWindow: google.maps.InfoWindow;
-  groupId: string;
 }
+
+// Marker color
+const MARKER_COLOR = '#EF4444'; // Red
 
 // Global callback name for Google Maps
 const CALLBACK_NAME = 'initGoogleMapsCallback';
@@ -41,8 +41,6 @@ let resolveCallback: (() => void) | null = null;
 
 export function MapView({
   places = [],
-  placeGroups = [],
-  activeGroupId = null,
   selectedPlace,
   onPlaceSelect,
   userLocation,
@@ -92,7 +90,6 @@ export function MapView({
 
         // Create a promise that resolves when Google Maps is ready
         const mapsPromise = new Promise<void>((resolve) => {
-          // Check if already loaded
           if (window.google?.maps?.Map) {
             resolve();
             return;
@@ -136,10 +133,8 @@ export function MapView({
       return;
     }
 
-    // Double-check that google.maps.Map is actually available
     if (typeof google.maps.Map !== 'function') {
       console.error('google.maps.Map is not a constructor');
-      // Defer state update to avoid cascading renders
       queueMicrotask(() => {
         setError('Google Maps failed to initialize properly');
         setIsLoading(false);
@@ -150,7 +145,6 @@ export function MapView({
     initAttemptedRef.current = true;
 
     try {
-      // Use user location as default center if available
       const initialCenter = userLocation
         ? { lat: userLocation.lat, lng: userLocation.lng }
         : DEFAULT_MAP_CENTER;
@@ -167,7 +161,6 @@ export function MapView({
       setIsLoading(false);
     } catch (err) {
       console.error('Map initialization error:', err);
-      // Defer state update to avoid cascading renders
       queueMicrotask(() => {
         setError(err instanceof Error ? err.message : 'Failed to load map');
         setIsLoading(false);
@@ -184,7 +177,6 @@ export function MapView({
   useEffect(() => {
     if (!map) return;
 
-    // Remove existing polyline
     if (polylineRef.current) {
       polylineRef.current.setMap(null);
       polylineRef.current = null;
@@ -192,10 +184,8 @@ export function MapView({
 
     if (!directionsPolyline) return;
 
-    // Decode and render the polyline
     const path = google.maps.geometry?.encoding?.decodePath(directionsPolyline);
     if (!path) {
-      // If geometry library not loaded, we need to add it
       console.warn('Google Maps geometry library not loaded');
       return;
     }
@@ -211,7 +201,6 @@ export function MapView({
 
     polylineRef.current = polyline;
 
-    // Fit map to show the entire route
     const bounds = new google.maps.LatLngBounds();
     path.forEach((point) => bounds.extend(point));
     map.fitBounds(bounds, 50);
@@ -225,7 +214,6 @@ export function MapView({
   useEffect(() => {
     if (!map) return;
 
-    // Remove existing user marker
     if (userMarkerRef.current) {
       userMarkerRef.current.setMap(null);
       userMarkerRef.current = null;
@@ -233,7 +221,6 @@ export function MapView({
 
     if (!userLocation) return;
 
-    // Create user location marker with custom icon
     const userMarker = new google.maps.Marker({
       position: { lat: userLocation.lat, lng: userLocation.lng },
       map,
@@ -248,7 +235,6 @@ export function MapView({
       },
     });
 
-    // Add pulsing circle around user marker
     const pulseCircle = new google.maps.Circle({
       strokeColor: '#4285F4',
       strokeOpacity: 0.4,
@@ -257,12 +243,11 @@ export function MapView({
       fillOpacity: 0.1,
       map,
       center: { lat: userLocation.lat, lng: userLocation.lng },
-      radius: 500, // 500 meters
+      radius: 500,
     });
 
     userMarkerRef.current = userMarker;
 
-    // Pan to user location when it changes
     map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
     map.setZoom(13);
 
@@ -272,7 +257,7 @@ export function MapView({
     };
   }, [map, userLocation]);
 
-  // Update markers when places or groups change
+  // Update markers when places change
   useEffect(() => {
     if (!map) return;
 
@@ -283,65 +268,52 @@ export function MapView({
     });
     markersRef.current = [];
 
-    // If we have place groups, use those; otherwise fall back to flat places
-    const groupsToRender = placeGroups.length > 0 ? placeGroups : 
-      (places.length > 0 ? [{ id: 'default', query: '', places, color: '#3B82F6', createdAt: new Date() }] : []);
-
-    if (groupsToRender.length === 0 || groupsToRender.every(g => g.places.length === 0)) return;
+    if (places.length === 0) return;
 
     const newMarkers: MapMarker[] = [];
     const bounds = new google.maps.LatLngBounds();
 
-    groupsToRender.forEach((group) => {
-      const isActive = activeGroupId ? group.id === activeGroupId : group.id === groupsToRender[groupsToRender.length - 1].id;
-      const opacity = isActive ? 1.0 : 0.35;
+    places.forEach((place) => {
+      const location = 'location' in place ? place.location : null;
+      if (!location) return;
 
-      group.places.forEach((place) => {
-        const location = 'location' in place ? place.location : null;
-        if (!location) return;
+      const position = { lat: location.lat, lng: location.lng };
 
-        const position = { lat: location.lat, lng: location.lng };
-
-        // Create marker with custom icon based on group color
-        const marker = new google.maps.Marker({
-          position,
-          map,
-          title: place.name,
-          animation: google.maps.Animation.DROP,
-          opacity,
-          // Custom icon with group color
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: group.color,
-            fillOpacity: opacity,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
-          },
-        });
-
-        const infoContent = `
-          <div style="padding: 8px; max-width: 200px;">
-            <h3 style="font-weight: bold; margin-bottom: 4px;">${place.name}</h3>
-            ${place.address ? `<p style="font-size: 12px; color: #666;">${place.address}</p>` : ''}
-            ${'rating' in place && place.rating ? `<p style="font-size: 12px;">⭐ ${place.rating}</p>` : ''}
-            ${group.query ? `<p style="font-size: 11px; color: #999; margin-top: 4px;">Search: ${group.query}</p>` : ''}
-          </div>
-        `;
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: infoContent,
-        });
-
-        marker.addListener('click', () => {
-          newMarkers.forEach(({ infoWindow: iw }) => iw.close());
-          infoWindow.open(map, marker);
-          onPlaceSelect?.(place);
-        });
-
-        bounds.extend(position);
-        newMarkers.push({ place, marker, infoWindow, groupId: group.id });
+      const marker = new google.maps.Marker({
+        position,
+        map,
+        title: place.name,
+        animation: google.maps.Animation.DROP,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: MARKER_COLOR,
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+        },
       });
+
+      const infoContent = `
+        <div style="padding: 8px; max-width: 200px;">
+          <h3 style="font-weight: bold; margin-bottom: 4px;">${place.name}</h3>
+          ${place.address ? `<p style="font-size: 12px; color: #666;">${place.address}</p>` : ''}
+          ${'rating' in place && place.rating ? `<p style="font-size: 12px;">⭐ ${place.rating}</p>` : ''}
+        </div>
+      `;
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: infoContent,
+      });
+
+      marker.addListener('click', () => {
+        newMarkers.forEach(({ infoWindow: iw }) => iw.close());
+        infoWindow.open(map, marker);
+        onPlaceSelect?.(place);
+      });
+
+      bounds.extend(position);
+      newMarkers.push({ place, marker, infoWindow });
     });
 
     if (newMarkers.length > 0) {
@@ -356,7 +328,7 @@ export function MapView({
         infoWindow.close();
       });
     };
-  }, [map, places, placeGroups, activeGroupId, onPlaceSelect]);
+  }, [map, places, onPlaceSelect]);
 
   // Handle selected place
   useEffect(() => {
@@ -394,10 +366,7 @@ export function MapView({
 
   return (
     <div className={`relative w-full h-full ${className || ''}`}>
-      {/* Map container */}
       <div ref={mapRef} className="absolute inset-0 w-full h-full" />
-
-      {/* Loading skeleton */}
       {isLoading && (
         <div className="absolute inset-0 pointer-events-none">
           <Skeleton className="w-full h-full" />

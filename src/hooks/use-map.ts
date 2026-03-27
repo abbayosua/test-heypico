@@ -1,30 +1,14 @@
-// useMap Hook - Map state management
+// useMap Hook - Map state management (simplified - no grouping)
 
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { Place, ExtractedPlace, DirectionsRoute, GeocodeResult, PlaceGroup } from '@/types';
-
-// Colors for place groups (cycling through)
-const GROUP_COLORS = [
-  '#3B82F6', // Blue
-  '#EF4444', // Red
-  '#10B981', // Green
-  '#F59E0B', // Amber
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#06B6D4', // Cyan
-  '#F97316', // Orange
-];
+import type { Place, ExtractedPlace, DirectionsRoute, GeocodeResult } from '@/types';
 
 interface UseMapReturn {
-  places: (Place | ExtractedPlace)[]; // All places from all groups (for backward compat)
-  placeGroups: PlaceGroup[];
-  activeGroupId: string | null;
-  setPlaces: (places: (Place | ExtractedPlace)[]) => void;
-  addPlaceGroup: (query: string, places: (Place | ExtractedPlace)[]) => string;
-  setActiveGroup: (groupId: string | null) => void;
-  clearPlaceGroups: () => void;
+  places: (Place | ExtractedPlace)[];
+  addPlaces: (places: (Place | ExtractedPlace)[]) => void;
+  clearPlaces: () => void;
   selectedPlace: Place | ExtractedPlace | null;
   setSelectedPlace: (place: Place | ExtractedPlace | null) => void;
   directions: DirectionsRoute[] | null;
@@ -42,8 +26,6 @@ interface UseMapReturn {
 
 export function useMap(): UseMapReturn {
   const [places, setPlaces] = useState<(Place | ExtractedPlace)[]>([]);
-  const [placeGroups, setPlaceGroups] = useState<PlaceGroup[]>([]);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | ExtractedPlace | null>(null);
   const [directions, setDirections] = useState<DirectionsRoute[] | null>(null);
   const [directionsLoading, setDirectionsLoading] = useState(false);
@@ -52,37 +34,23 @@ export function useMap(): UseMapReturn {
   const [googleMapsUrl, setGoogleMapsUrl] = useState<string | null>(null);
   const [directionsPolyline, setDirectionsPolyline] = useState<string | null>(null);
 
-  // Add a new place group
-  const addPlaceGroup = useCallback((query: string, newPlaces: (Place | ExtractedPlace)[]): string => {
-    const groupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const colorIndex = placeGroups.length % GROUP_COLORS.length;
-    
-    const newGroup: PlaceGroup = {
-      id: groupId,
-      query,
-      places: newPlaces,
-      color: GROUP_COLORS[colorIndex],
-      createdAt: new Date(),
-    };
-
-    setPlaceGroups(prev => [...prev, newGroup]);
-    setActiveGroupId(groupId); // New group becomes active
-    
-    // Update flat places for backward compatibility
-    setPlaces(prev => [...prev, ...newPlaces]);
-    
-    return groupId;
-  }, [placeGroups.length]);
-
-  // Set active group (for highlighting)
-  const setActiveGroup = useCallback((groupId: string | null) => {
-    setActiveGroupId(groupId);
+  // Add places to the map
+  const addPlaces = useCallback((newPlaces: (Place | ExtractedPlace)[]) => {
+    setPlaces(prev => {
+      // Filter out duplicates based on name and location
+      const existingKeys = new Set(
+        prev.map(p => `${p.name}-${'location' in p ? `${p.location?.lat}-${p.location?.lng}` : ''}`)
+      );
+      const uniqueNewPlaces = newPlaces.filter(p => {
+        const key = `${p.name}-${'location' in p ? `${p.location?.lat}-${p.location?.lng}` : ''}`;
+        return !existingKeys.has(key);
+      });
+      return [...prev, ...uniqueNewPlaces];
+    });
   }, []);
 
-  // Clear all place groups
-  const clearPlaceGroups = useCallback(() => {
-    setPlaceGroups([]);
-    setActiveGroupId(null);
+  // Clear all places
+  const clearPlaces = useCallback(() => {
     setPlaces([]);
   }, []);
 
@@ -105,12 +73,10 @@ export function useMap(): UseMapReturn {
         setDirections(data.routes);
         setGoogleMapsUrl(data.googleMapsUrl);
         
-        // Set the first route's polyline for map display
         if (data.routes && data.routes.length > 0 && data.routes[0].polyline) {
           setDirectionsPolyline(data.routes[0].polyline);
         }
         
-        // Set origin and destination strings for display
         setDirectionsOrigin(typeof origin === 'string' ? origin : 'Your Location');
         setDirectionsDestination(typeof destination === 'string' ? destination : (destinationName || 'Selected Place'));
       }
@@ -184,12 +150,8 @@ export function useMap(): UseMapReturn {
 
   return {
     places,
-    placeGroups,
-    activeGroupId,
-    setPlaces,
-    addPlaceGroup,
-    setActiveGroup,
-    clearPlaceGroups,
+    addPlaces,
+    clearPlaces,
     selectedPlace,
     setSelectedPlace,
     directions,

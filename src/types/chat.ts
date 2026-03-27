@@ -17,7 +17,6 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   placesData: ExtractedPlace[] | null;
-  placeGroupId?: string; // Reference to the place group
   createdAt: Date;
 }
 
@@ -43,8 +42,7 @@ export interface SendMessageRequest {
 export interface SendMessageResponse {
   response: string;
   places: ExtractedPlace[];
-  placeGroupId: string; // ID of the place group for this search
-  query: string; // The original search query
+  query: string;
   provider: string;
   model: string;
   conversationId: string;

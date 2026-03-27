@@ -11,7 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useMounted } from '@/hooks';
 
 interface UserLocation {
   lat: number;
@@ -34,18 +33,10 @@ export function Header({
   userLocation,
   onRequestLocation,
 }: HeaderProps) {
-  // Track if component is mounted to prevent hydration mismatch
-  const mounted = useMounted();
-
-  // Default values for SSR to prevent hydration mismatch
-  const locationText = mounted
-    ? (userLocation ? (userLocation.city || 'Location Set') : 'Set Location')
-    : 'Set Location';
-
-  const tooltipText = mounted
-    ? (userLocation
-        ? `Location: ${userLocation.city || `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}`}`
-        : 'Click to set your location')
+  // Compute location text directly from props (no useMounted needed)
+  const locationText = userLocation ? (userLocation.city || 'Location Set') : 'Set Location';
+  const tooltipText = userLocation
+    ? `Location: ${userLocation.city || `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}`}`
     : 'Click to set your location';
 
   return (
@@ -60,21 +51,23 @@ export function Header({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Location Indicator */}
+        {/* Location Indicator - simplified without TooltipTrigger asChild */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mr-2 gap-1.5 text-muted-foreground hover:text-foreground"
-                onClick={onRequestLocation}
-              >
-                <Navigation className="h-4 w-4" />
-                <span className="hidden sm:inline max-w-[120px] truncate">
-                  {locationText}
-                </span>
-              </Button>
+              <span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mr-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                  onClick={onRequestLocation}
+                >
+                  <Navigation className="h-4 w-4" />
+                  <span className="hidden sm:inline max-w-[120px] truncate">
+                    {locationText}
+                  </span>
+                </Button>
+              </span>
             </TooltipTrigger>
             <TooltipContent>
               {tooltipText}

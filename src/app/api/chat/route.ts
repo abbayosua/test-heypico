@@ -22,7 +22,6 @@ interface ChatRequest {
 interface ChatResponse {
   response: string;
   places: ExtractedPlace[];
-  placeGroupId: string;
   query: string;
   provider: string;
   model: string;
@@ -237,13 +236,9 @@ export async function POST(request: NextRequest) {
     // Log usage
     await logApiUsage('llm', result.provider, sessionId);
 
-    // Generate a unique place group ID for this search
-    const placeGroupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
     const response: ChatResponse = {
       response: result.response,
       places,
-      placeGroupId,
       query: message,
       provider: result.provider,
       model: result.model,
