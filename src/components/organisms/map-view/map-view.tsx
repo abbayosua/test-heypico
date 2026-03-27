@@ -32,6 +32,9 @@ interface MapMarker {
 // Marker color
 const MARKER_COLOR = '#EF4444'; // Red
 
+// Location pin SVG path (teardrop/pin shape)
+const LOCATION_PIN_PATH = 'M0-24c-6.627 0-12 5.373-12 12 0 8.25 12 24 12 24s12-15.75 12-24c0-6.627-5.373-12-12-12z';
+
 // Global callback name for Google Maps
 const CALLBACK_NAME = 'initGoogleMapsCallback';
 
@@ -285,12 +288,13 @@ export function MapView({
         title: place.name,
         animation: google.maps.Animation.DROP,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
+          path: LOCATION_PIN_PATH,
           fillColor: MARKER_COLOR,
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 2,
+          scale: 1,
+          anchor: new google.maps.Point(0, 0),
         },
       });
 
